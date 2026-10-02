@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ArogyaKaval – ஆரோக்ய காவல்</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#12332e;--leaf:#1f7a5c;--mint:#e3f1ea;--paper:#f5f8f5;--card:#fff;--line:#cfe0d6;--ok:#1f7a5c;--warn:#b7791f;--bad:#c53030;--r:14px}
+@media(prefers-color-scheme:dark){:root{--ink:#e6f2ec;--leaf:#5cc59b;--mint:#1b2f28;--paper:#0f1a17;--card:#162420;--line:#2a4038;--ok:#5cc59b;--warn:#f0b84a;--bad:#ff7b7b}}
+*{box-sizing:border-box}
+html{scroll-padding-top:70px}
+body{margin:0;font-family:"Noto Sans Tamil",system-ui,sans-serif;background:var(--paper);color:var(--ink);line-height:1.6}
+header{padding:28px 18px 20px;background:var(--leaf);color:#fff}
+header h1{margin:0;font-size:clamp(1.8rem,6vw,2.8rem);font-weight:800;letter-spacing:-.5px}
+header p{margin:4px 0 0;max-width:60ch;opacity:.92}
+nav{position:sticky;top:0;z-index:5;display:flex;gap:6px;overflow-x:auto;padding:8px 12px;background:var(--paper);border-bottom:1px solid var(--line)}
+nav button{flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:99px;font:inherit;font-size:.9rem;cursor:pointer}
+nav button[aria-selected=true]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+main{max-width:760px;margin:0 auto;padding:16px 14px 90px}
+section{display:none}section.on{display:block}
+h2{font-size:1.35rem;margin:6px 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px}
+label{display:block;font-size:.88rem;font-weight:600;margin:10px 0 4px}
+select,input,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit;background:var(--paper);color:var(--ink)}
+button.p{background:var(--leaf);color:#fff;border:0;border-radius:10px;padding:11px 18px;font:inherit;font-weight:600;cursor:pointer;margin-top:12px}
+button.g{background:none;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:9px 14px;font:inherit;cursor:pointer;margin-top:12px}
+:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lvl{display:flex;gap:12px;align-items:flex-start;border-left:8px solid var(--ok);padding:10px 12px;background:var(--mint);border-radius:10px;margin:10px 0}
+.lvl.warn{border-color:var(--warn)}.lvl.bad{border-color:var(--bad)}
+.lvl b{display:block}
+.big{font-size:2.4rem;font-weight:800;line-height:1}
+.muted{font-size:.82rem;opacity:.75}
+.stats{display:flex;gap:18px;flex-wrap:wrap;margin:8px 0}
+.stats div{min-width:80px}
+ul.l{padding-left:18px;margin:6px 0}
+li.item{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+li.item img{width:56px;height:56px;object-fit:cover;border-radius:8px}
+.sos{position:fixed;right:14px;bottom:14px;z-index:9;background:var(--bad);color:#fff;text-decoration:none;font-weight:800;padding:14px 20px;border-radius:99px;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+footer{max-width:760px;margin:0 auto;padding:0 14px 40px;font-size:.8rem;opacity:.75}
+</style>
+</head>
+<body>
+<header>
+<h1>ArogyaKaval · ஆரோக்ய காவல்</h1>
+<p>தென்னிந்தியாவுக்கான சுகாதார எச்சரிக்கை. வெப்பம், டெங்கு, சர்க்கரை, BP – உங்கள் ஊருக்கு ஏற்ப எளிய தமிழில்.<br><span class="muted" style="color:#fff">Early health warnings for South India, in simple Tamil.</span></p>
+</header>
+<nav role="tablist" id="nav"></nav>
+<main>
+
+<section id="alerts">
+<h2>இன்றைய எச்சரிக்கை / Today's alerts</h2>
+<div class="card">
+<label for="place">ஊர் / District</label>
+<select id="place"></select>
+<button class="g" id="geo" type="button">📍 என் இடம் / Use my location</button>
+<label for="work">வேலை / Work type</label>
+<select id="work">
+<option value="out">வெளியில் வேலை (விவசாயம், கட்டுமானம்) / Outdoor work</option>
+<option value="mix">கலந்த வேலை / Mixed</option>
+<option value="in">வீடு / அலுவலகம் / Indoor</option>
+<option value="old">முதியவர் / Elderly</option>
+</select>
+<button class="p" id="go" type="button">எச்சரிக்கை பார் / Check alerts</button>
+</div>
+<div id="out" aria-live="polite"></div>
+</section>
+
+<section id="diab">
+<h2>சர்க்கரை & BP சோதனை / Diabetes & BP check</h2>
+<div class="card">
+<p class="muted">Indian Diabetes Risk Score (IDRS) அடிப்படையில். இது பரிசோதனை அல்ல, ஆபத்து மதிப்பீடு மட்டுமே.</p>
+<div class="row">
+<div><label for="age">வயது / Age</label><input id="age" type="number" min="10" max="110"></div>
+<div><label for="sex">பாலினம் / Sex</label><select id="sex"><option value="m">ஆண் / Male</option><option value="f">பெண் / Female</option></select></div>
+</div>
+<label for="waist">இடுப்பளவு (cm) / Waist</label><input id="waist" type="number" min="40" max="200">
+<label for="act">உடல் உழைப்பு / Activity</label>
+<select id="act">
+<option value="0">கடின உழைப்பு / உடற்பயிற்சி — Vigorous</option>
+<option value="10">மிதமான — Moderate</option>
+<option value="20">லேசான — Mild</option>
+<option value="30">உட்கார்ந்தே — Sedentary</option>
+</select>
+<label for="fam">குடும்பத்தில் சர்க்கரை / Family history</label>
+<select id="fam"><option value="0">இல்லை / None</option><option value="10">ஒருவருக்கு / One parent</option><option value="20">இருவருக்கும் / Both parents</option></select>
+<button class="p" id="dbtn" type="button">மதிப்பிடு / Check risk</button>
+<div id="dout" aria-live="polite"></div>
+</div>
+<div class="card">
+<h3 style="margin-top:0">இரத்த அழுத்தம் / Blood pressure</h3>
+<div class="row">
+<div><label for="sys">Systolic (மேல்)</label><input id="sys" type="number"></div>
+<div><label for="dia">Diastolic (கீழ்)</label><input id="dia" type="number"></div>
+</div>
+<button class="p" id="bbtn" type="button">பார் / Check</button>
+<div id="bout" aria-live="polite"></div>
+</div>
+</section>
+
+<section id="sym">
+<h2>அறிகுறி உதவியாளர் / Symptom helper</h2>
+<div class="card">
+<label for="stxt">உங்கள் அறிகுறிகளை தமிழில் அல்லது English-ல் சொல்லுங்கள்</label>
+<textarea id="stxt" rows="3" placeholder="உதா: காய்ச்சல், மூட்டு வலி, தலைவலி"></textarea>
+<button class="p" id="sbtn" type="button">பார் / Check</button>
+<button class="g" id="mic" type="button">🎤 பேசுங்கள் / Speak</button>
+<div id="sout" aria-live="polite"></div>
+</div>
+</section>
+
+<section id="more">
+<h2>கொசு இடம் புகார் / Mosquito spot</h2>
+<div class="card">
+<p class="muted">தண்ணீர் தேங்கிய இடத்தை புகைப்படம் எடுத்து சேமிக்கவும். பிறகு ஊராட்சி / நகராட்சிக்கு அனுப்பலாம்.</p>
+<label for="mplace">இடம் / Place</label><input id="mplace" placeholder="தெரு, ஊர்">
+<label for="mphoto">புகைப்படம் / Photo</label><input id="mphoto" type="file" accept="image/*" capture="environment">
+<button class="p" id="madd" type="button">சேமி / Save report</button>
+<ul class="l" id="mlist" style="list-style:none;padding:0"></ul>
+</div>
+
+<h2>மருந்து நினைவூட்டல் / Medicine reminder</h2>
+<div class="card">
+<p class="muted">இந்தப் பக்கம் திறந்திருக்கும் போது நினைவூட்டும்.</p>
+<div class="row">
+<div><label for="mname">மருந்து / Medicine</label><input id="mname"></div>
+<div><label for="mtime">நேரம் / Time</label><input id="mtime" type="time"></div>
+</div>
+<button class="p" id="rbtn" type="button">சேர் / Add</button>
+<ul id="rlist" style="list-style:none;padding:0"></ul>
+</div>
+
+<h2>அருகில் உதவி / Nearby help</h2>
+<div class="card">
+<a class="p" style="display:inline-block;text-decoration:none;background:var(--leaf);color:#fff;padding:11px 18px;border-radius:10px;font-weight:600" target="_blank" rel="noopener" href="https://www.google.com/maps/search/hospital+near+me">🏥 அருகிலுள்ள மருத்துவமனை</a>
+<a class="g" style="display:inline-block;text-decoration:none;color:var(--ink);padding:10px 14px;border:1px solid var(--line);border-radius:10px;margin-left:6px" target="_blank" rel="noopener" href="https://www.google.com/maps/search/primary+health+centre+near+me">PHC</a>
+<p class="muted">அவசர எண்கள்: 108 (ஆம்புலன்ஸ்), 104 (சுகாதார உதவி), 112 (அவசரம்)</p>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0">அரசு திட்டங்கள் / Schemes</h3>
+<ul class="l"><li>CMCHIS – முதலமைச்சர் காப்பீட்டுத் திட்டம் (Tamil Nadu)</li><li>Ayushman Bharat PM-JAY</li><li>Makkalai Thedi Maruthuvam – வீடு தேடி மருத்துவம் (TN)</li></ul>
+<a target="_blank" rel="noopener" href="https://pmjay.gov.in" style="color:var(--leaf)">pmjay.gov.in</a>
+</div>
+</section>
+</main>
+<footer>⚠️ இது மருத்துவரின் ஆலோசனைக்கு மாற்று அல்ல. தீவிர அறிகுறிகள் இருந்தால் உடனே மருத்துவரை அணுகுங்கள். / Not a medical diagnosis. Data: Open-Meteo. Your inputs stay in your browser.</footer>
+<a class="sos" href="tel:108" aria-label="Call 108 ambulance">🚑 108</a>
+
+<script>
+const $=id=>document.getElementById(id);
+const tabs=[["alerts","எச்சரிக்கை"],["diab","சர்க்கரை/BP"],["sym","அறிகுறி"],["more","மேலும்"]];
+tabs.forEach(([id,t],i)=>{const b=document.createElement("button");b.textContent=t;b.setAttribute("role","tab");b.onclick=()=>show(id);b.dataset.id=id;$("nav").append(b)});
+function show(id){tabs.forEach(([x])=>$(x).classList.toggle("on",x===id));[...$("nav").children].forEach(b=>b.setAttribute("aria-selected",b.dataset.id===id));scrollTo(0,0)}
+show("alerts");
+
+const P=[["Chennai",13.08,80.27],["Madurai",9.92,78.12],["Tirunelveli",8.73,77.70],["Tenkasi",8.96,77.31],["Thoothukudi",8.76,78.13],["Kanyakumari",8.18,77.43],["Coimbatore",11.02,76.96],["Tiruchirappalli",10.80,78.69],["Salem",11.66,78.15],["Thanjavur",10.79,79.14],["Vellore",12.92,79.13],["Erode",11.34,77.72],["Bengaluru",12.97,77.59],["Hyderabad",17.39,78.49],["Kochi",9.93,76.27],["Thiruvananthapuram",8.52,76.94]];
+P.forEach((p,i)=>$("place").add(new Option(p[0],i)));
+$("place").value=2;
+let pos=null;
+$("geo").onclick=()=>navigator.geolocation?navigator.geolocation.getCurrentPosition(g=>{pos=[g.coords.latitude,g.coords.longitude];$("geo").textContent="📍 இடம் கிடைத்தது ✓";run()},()=>alert("இடம் அனுமதி கிடைக்கவில்லை. ஊரைத் தேர்வு செய்யவும்.")):alert("Location not supported");
+$("place").onchange=()=>pos=null;
+$("go").onclick=run;
+
+function lvl(c,t,m){return `<div class="lvl ${c}"><div><b>${t}</b>${m}</div></div>`}
+async function run(){
+  const o=$("out");o.innerHTML='<p class="muted">ஏற்றுகிறது… Loading…</p>';
+  const [la,lo]=pos||[P[$("place").value][1],P[$("place").value][2]];
+  try{
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,relative_humidity_2m,apparent_temperature&daily=apparent_temperature_max,precipitation_sum&past_days=7&forecast_days=2&timezone=auto`);
+    const d=await r.json(),c=d.current,dl=d.daily;
+    const rain7=dl.precipitation_sum.slice(0,7).reduce((a,b)=>a+(b||0),0);
+    const hi=dl.apparent_temperature_max[7],w=$("work").value;
+    const th=w==="out"||w==="old"?[34,39,43]:[37,41,45];
+    let H;
+    if(hi>=th[2])H=lvl("bad","வெப்ப ஆபத்து / Extreme heat","உணர்வு வெப்பம் "+hi.toFixed(0)+"°C. 12–4 மணி வெளியே செல்ல வேண்டாம். ORS / உப்பு-சர்க்கரை நீர் குடியுங்கள். தலைசுற்றல், வாந்தி வந்தால் உடனே நிழலுக்கு சென்று 108-ஐ அழைக்கவும்.");
+    else if(hi>=th[1])H=lvl("warn","அதிக வெப்பம் / High heat","உணர்வு வெப்பம் "+hi.toFixed(0)+"°C. தொப்பி/துண்டு, ஒவ்வொரு 30 நிமிடமும் தண்ணீர். வேலையை காலை 11 மணிக்குள் முடிக்கவும்.");
+    else if(hi>=th[0])H=lvl("warn","சற்று அதிக வெப்பம் / Warm","உணர்வு வெப்பம் "+hi.toFixed(0)+"°C. நிறைய தண்ணீர் குடியுங்கள்.");
+    else H=lvl("ok","வெப்பம் சாதாரணம் / Normal","உணர்வு வெப்பம் "+hi.toFixed(0)+"°C.");
+    const t=c.temperature_2m,h=c.relative_humidity_2m;
+    let s=0;if(rain7>=20)s+=2;else if(rain7>=5)s+=1;if(t>=24&&t<=34)s+=1;if(h>=65)s+=1;
+    let D=s>=4?lvl("bad","டெங்கு ஆபத்து அதிகம் / High dengue risk","கடந்த 7 நாளில் "+rain7.toFixed(0)+" mm மழை, ஈரப்பதம் "+h+"%. டயர், சட்டி, தொட்டியில் தண்ணீர் தேங்காமல் பார்க்கவும். காய்ச்சல் 2 நாளுக்கு மேல் இருந்தால் பரிசோதனை செய்யவும்.")
+      :s>=2?lvl("warn","டெங்கு ஆபத்து நடுத்தரம் / Medium dengue risk","மழை "+rain7.toFixed(0)+" mm. வாரம் ஒருமுறை தண்ணீர் தொட்டிகளை காலி செய்து துடைக்கவும்.")
+      :lvl("ok","டெங்கு ஆபத்து குறைவு / Low dengue risk","மழை "+rain7.toFixed(0)+" mm. தொடர்ந்து கவனமாக இருங்கள்.");
+    o.innerHTML=`<div class="card"><div class="stats"><div><div class="big">${t.toFixed(0)}°</div><span class="muted">வெப்பம்</span></div><div><div class="big">${h}%</div><span class="muted">ஈரப்பதம்</span></div><div><div class="big">${rain7.toFixed(0)}</div><span class="muted">மழை mm (7 நாள்)</span></div></div>${H}${D}<p class="muted">விதி அடிப்படையிலான மதிப்பீடு (rule-based). அதிகாரப்பூர்வ எச்சரிக்கை: IMD.</p></div>`;
+  }catch(e){o.innerHTML=lvl("warn","இணைப்பு பிழை / Network error","இணையம் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.")}
+}
+
+$("dbtn").onclick=()=>{
+  const a=+$("age").value,w=+$("waist").value,m=$("sex").value==="m";
+  if(!a||!w){$("dout").innerHTML=lvl("warn","விவரம் தேவை","வயது, இடுப்பளவு உள்ளிடவும்.");return}
+  let s=a>=50?30:a>=35?20:0;
+  s+=m?(w>=100?20:w>=90?10:0):(w>=90?20:w>=80?10:0);
+  s+=+$("act").value+ +$("fam").value;
+  $("dout").innerHTML=s>=60?lvl("bad","அதிக ஆபத்து / High risk — "+s+"/100","விரைவில் மருத்துவரை பார்த்து இரத்த சர்க்கரை (FBS/HbA1c) பரிசோதியுங்கள்.")
+   :s>=30?lvl("warn","நடுத்தர ஆபத்து / Moderate — "+s+"/100","6 மாதத்துக்கு ஒருமுறை சர்க்கரை பரிசோதனை. தினமும் 30 நிமிடம் நடை, அரிசி அளவு குறைப்பு.")
+   :lvl("ok","குறைந்த ஆபத்து / Low — "+s+"/100","இதே பழக்கத்தை தொடருங்கள். ஆண்டுக்கு ஒருமுறை பரிசோதனை.");
+};
+$("bbtn").onclick=()=>{
+  const s=+$("sys").value,d=+$("dia").value;
+  if(!s||!d){$("bout").innerHTML=lvl("warn","விவரம் தேவை","இரண்டு எண்களையும் உள்ளிடவும்.");return}
+  $("bout").innerHTML=s>=180||d>=120?lvl("bad","அவசரம் / Crisis","உடனே மருத்துவமனை செல்லுங்கள் அல்லது 108 அழைக்கவும்.")
+   :s>=140||d>=90?lvl("bad","உயர் இரத்த அழுத்தம் / High","மருத்துவரை சந்தித்து உறுதிப்படுத்துங்கள். உப்பு குறையுங்கள்.")
+   :s>=130||d>=80?lvl("warn","சற்று அதிகம் / Stage 1","உப்பு குறைத்து, நடை பழகி, 1 மாதம் கண்காணியுங்கள்.")
+   :lvl("ok","சாதாரணம் / Normal","நல்ல நிலை. தொடர்ந்து சோதனை செய்யுங்கள்.");
+};
+
+const R=[
+ {k:["chest pain","நெஞ்சு வலி","நெஞ்சுவலி","breathless","breathing","மூச்சு","unconscious","மயக்கம் போட்டு","stroke","பேச்சு குளறல்","seizure","வலிப்பு","bleeding","ரத்தம் கொட்டு"],c:"bad",t:"அவசரம் / Emergency",m:"உடனே 108 அழைக்கவும் அல்லது அருகிலுள்ள மருத்துவமனை செல்லவும்."},
+ {k:["rash","தடிப்பு","joint pain","மூட்டு வலி","body pain","உடல் வலி","dengue","டெங்கு"],c:"warn",t:"டெங்கு/சிக்குன்குனியா சந்தேகம்",m:"காய்ச்சலுடன் இவை இருந்தால் அரசு மருத்துவமனையில் இலவச டெங்கு பரிசோதனை செய்யுங்கள். நிறைய நீர் குடியுங்கள். ஆஸ்பிரின்/ibuprofen எடுக்க வேண்டாம்."},
+ {k:["thirst","தாகம்","frequent urination","அடிக்கடி சிறுநீர்","tired","சோர்வு","blurred","பார்வை மங்கல்"],c:"warn",t:"சர்க்கரை பரிசோதனை பரிந்துரை",m:"இரத்த சர்க்கரை பரிசோதனை செய்யுங்கள். 'சர்க்கரை & BP' பகுதியில் ஆபத்தை பாருங்கள்."},
+ {k:["heat","வெயில்","தலைசுற்று","dizzy","வாந்தி","vomit","sunstroke"],c:"warn",t:"வெப்ப பாதிப்பு சந்தேகம்",m:"நிழலுக்கு செல்லுங்கள், ORS / உப்பு-சர்க்கரை நீர் குடியுங்கள், உடலை ஈரத்துணியால் துடையுங்கள். 30 நிமிடத்தில் சரியாகாவிட்டால் மருத்துவமனை."},
+ {k:["fever","காய்ச்சல்","headache","தலைவலி"],c:"warn",t:"காய்ச்சல்",m:"ஓய்வு, நிறைய நீர். 2–3 நாளுக்கு மேல் அல்லது மிக அதிகமாக இருந்தால் மருத்துவரை பாருங்கள்."},
+ {k:["cold","சளி","cough","இருமல்","sore throat","தொண்டை"],c:"ok",t:"சாதாரண சளி/இருமல்",m:"வீட்டு பராமரிப்பு: சூடான நீர், ஓய்வு. 5 நாளுக்கு மேல் நீடித்தால் மருத்துவர்."}
+];
+$("sbtn").onclick=()=>{
+  const x=$("stxt").value.toLowerCase();
+  if(!x.trim())return;
+  const hit=R.filter(r=>r.k.some(k=>x.includes(k)));
+  $("sout").innerHTML=(hit.length?hit.map(r=>lvl(r.c,r.t,r.m)).join(""):lvl("warn","தெளிவாக இல்லை","அறிகுறிகள் தொடர்ந்தால் மருத்துவரை பாருங்கள்."))+'<p class="muted">இது மருத்துவ கண்டறிதல் அல்ல.</p>';
+};
+$("mic").onclick=()=>{
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){alert("இந்த browser-ல் voice இல்லை. Chrome பயன்படுத்தவும்.");return}
+  const r=new SR();r.lang="ta-IN";r.onresult=e=>{$("stxt").value=e.results[0][0].transcript;$("sbtn").click()};r.onerror=()=>alert("குரல் கேட்கவில்லை. மீண்டும் முயற்சிக்கவும்.");r.start();
+};
+
+function ld(k){try{return JSON.parse(localStorage.getItem(k))||[]}catch(e){return[]}}
+function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function renderM(){const l=$("mlist");l.innerHTML="";ld("ak_m").forEach((m,i)=>{const li=document.createElement("li");li.className="item";if(m.img){const im=new Image();im.src=m.img;im.alt="";li.append(im)}const s=document.createElement("span");s.textContent=m.place+" · "+m.date;const b=document.createElement("button");b.className="g";b.style.margin=0;b.textContent="📤";b.onclick=()=>{const t="கொசு உற்பத்தி இடம்: "+m.place+" ("+m.date+")";navigator.share?navigator.share({text:t}):location.href="https://wa.me/?text="+encodeURIComponent(t)};li.append(s,b);l.append(li)})}
+$("madd").onclick=()=>{
+  const place=$("mplace").value.trim();if(!place)return;
+  const f=$("mphoto").files[0],add=img=>{const a=ld("ak_m");a.unshift({place,img,date:new Date().toLocaleDateString("ta-IN")});sv("ak_m",a.slice(0,8));$("mplace").value="";$("mphoto").value="";renderM()};
+  if(!f)return add("");
+  const im=new Image();im.onload=()=>{const c=document.createElement("canvas");c.width=c.height=96;c.getContext("2d").drawImage(im,0,0,96,96);add(c.toDataURL("image/jpeg",.6))};im.src=URL.createObjectURL(f);
+};
+renderM();
+
+function renderR(){const l=$("rlist");l.innerHTML="";ld("ak_r").forEach((r,i)=>{const li=document.createElement("li");li.className="item";const s=document.createElement("span");s.textContent="💊 "+r.n+" — "+r.t;const b=document.createElement("button");b.className="g";b.style.margin=0;b.textContent="✕";b.setAttribute("aria-label","Remove");b.onclick=()=>{const a=ld("ak_r");a.splice(i,1);sv("ak_r",a);renderR()};li.append(s,b);l.append(li)})}
+$("rbtn").onclick=()=>{const n=$("mname").value.trim(),t=$("mtime").value;if(!n||!t)return;const a=ld("ak_r");a.push({n,t});sv("ak_r",a);$("mname").value="";renderR();if("Notification"in window&&Notification.permission==="default")Notification.requestPermission()};
+renderR();
+let last="";
+setInterval(()=>{const n=new Date(),k=String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0");if(k===last)return;last=k;ld("ak_r").filter(r=>r.t===k).forEach(r=>{const m="மருந்து நேரம்: "+r.n;if("Notification"in window&&Notification.permission==="granted")new Notification("ArogyaKaval",{body:m});else alert(m)})},15000);
+</script>
+</body>
+</html>
