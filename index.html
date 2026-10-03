@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ArogyaKaval – ஆரோக்ய காவல்</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#12332e;--leaf:#1f7a5c;--mint:#e3f1ea;--paper:#f5f8f5;--card:#fff;--line:#cfe0d6;--ok:#1f7a5c;--warn:#b7791f;--bad:#c53030}
+@media(prefers-color-scheme:dark){:root{--ink:#e6f2ec;--leaf:#5cc59b;--mint:#1b2f28;--paper:#0f1a17;--card:#162420;--line:#2a4038;--ok:#5cc59b;--warn:#f0b84a;--bad:#ff7b7b}}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans Tamil",system-ui,sans-serif;background:var(--paper);color:var(--ink);line-height:1.6}
+header{padding:16px;background:var(--leaf);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px}
+header h1{margin:0;font-size:1.5rem;font-weight:800}
+header p{margin:0;font-size:.85rem;opacity:.9}
+#lg{border:2px solid #fff;background:transparent;color:#fff;border-radius:99px;padding:6px 14px;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
+nav{position:sticky;top:0;z-index:5;display:flex;gap:6px;overflow-x:auto;padding:8px 10px;background:var(--paper);border-bottom:1px solid var(--line)}
+nav button{flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 13px;border-radius:99px;font:inherit;font-size:.88rem;cursor:pointer}
+nav button[aria-selected=true]{background:var(--ink);color:var(--paper)}
+main{max-width:720px;margin:0 auto;padding:14px 12px 90px}
+section{display:none}section.on{display:block}
+h2{font-size:1.25rem;margin:4px 0 10px}h3{margin:0 0 6px;font-size:1.05rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:.85rem;font-weight:600;margin:9px 0 3px}
+select,input,textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:10px;font:inherit;background:var(--paper);color:var(--ink)}
+input[type=checkbox]{width:auto}
+.cb{display:flex;gap:8px;align-items:center;font-weight:400}
+button.p{background:var(--leaf);color:#fff;border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer;margin-top:10px}
+button.g,a.g{background:none;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 12px;font:inherit;cursor:pointer;margin:6px 6px 0 0;display:inline-block;text-decoration:none}
+:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lvl{border-left:8px solid var(--ok);padding:9px 12px;background:var(--mint);border-radius:10px;margin:8px 0}
+.lvl.warn{border-color:var(--warn)}.lvl.bad{border-color:var(--bad)}.lvl b{display:block}
+.stats{display:flex;gap:16px;flex-wrap:wrap}.big{font-size:2rem;font-weight:800;line-height:1.1}
+.muted{font-size:.8rem;opacity:.75}
+.chip{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--mint);margin:2px 4px 2px 0;font-size:.85rem}
+.sel{background:var(--leaf)!important;color:#fff!important}
+.sos{position:fixed;right:12px;bottom:12px;z-index:9;background:var(--bad);color:#fff;text-decoration:none;font-weight:800;padding:13px 18px;border-radius:99px}
+#reg{max-width:720px;margin:0 auto;padding:14px 12px 40px}
+</style>
+</head>
+<body>
+<header><div><h1 id="h1"></h1><p id="hp"></p></div><button id="lg" type="button" aria-label="Change language">English</button></header>
+<nav id="nav" hidden role="tablist"></nav>
+<div id="reg" hidden></div>
+<main id="app" hidden>
+<section id="home"></section><section id="chk"></section><section id="hist"></section>
+<section id="guide"></section><section id="hlth"></section><section id="med"></section><section id="prof"></section>
+</main>
+<a class="sos" href="tel:108">🚑 108</a>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const dstr=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const td=()=>dstr(new Date());
+const ago=n=>{const d=new Date();d.setDate(d.getDate()-n);return dstr(d)};
+function gl(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
+function sl(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+let U=null,L=gl("ak_lang")||"ta",tab="home";
+const x=(ta,en)=>L==="en"?en:ta;
+const save=()=>{sl("ak_u_"+U.p.email,U);sl("ak_cur",U.p.email)};
+const lvl=(c,t,m)=>`<div class="lvl ${c}"><b>${t}</b>${m}</div>`;
+const P=[["Chennai",13.08,80.27],["Madurai",9.92,78.12],["Tirunelveli",8.73,77.70],["Tenkasi",8.96,77.31],["Thoothukudi",8.76,78.13],["Kanyakumari",8.18,77.43],["Coimbatore",11.02,76.96],["Tiruchirappalli",10.80,78.69],["Salem",11.66,78.15],["Thanjavur",10.79,79.14],["Vellore",12.92,79.13],["Erode",11.34,77.72],["Bengaluru",12.97,77.59],["Hyderabad",17.39,78.49],["Kochi",9.93,76.27],["Thiruvananthapuram",8.52,76.94]];
+const ht=v=>v==="தனியார்"?x("தனியார்","Private"):x("அரசு","Govt");
+
+/* ---------- Health guide (ta / en) ---------- */
+const G={
+fever:{ta:"காய்ச்சல்",en:"Fever",q:"fever",
+ s:["உடல் சூடு, நடுக்கம், சோர்வு.","Body heat, shivering, tiredness."],
+ m:["Paracetamol 500 mg (பெரியவர்கள், தேவைப்பட்டால் மட்டும், 6 மணி இடைவெளி). டெங்கு சந்தேகம் இருந்தால் Aspirin/Ibuprofen வேண்டாம்.","Paracetamol 500 mg (adults, only if needed, 6 hours apart). Avoid aspirin/ibuprofen if dengue is suspected."],
+ n:["நிலவேம்பு கசாயம், துளசி-இஞ்சி கஷாயம், கஞ்சி, இளநீர், நிறைய நீர், ஓய்வு.","Nilavembu kashayam, tulsi-ginger decoction, rice porridge, tender coconut water, plenty of fluids, rest."],
+ d:["3 நாளுக்கு மேல், 102°F மேல், சொறி, ரத்தப்போக்கு, கடும் வயிற்றுவலி இருந்தால் உடனே மருத்துவமனை.","Go to a hospital if it lasts over 3 days, exceeds 102°F, or comes with rash, bleeding or severe stomach pain."]},
+cold:{ta:"சளி / இருமல்",en:"Cold / Cough",q:"cold cough",
+ s:["மூக்கு ஒழுகல், தும்மல், தொண்டை வலி, இருமல்.","Runny nose, sneezing, sore throat, cough."],
+ m:["ஆவி பிடித்தல்; காய்ச்சல் இருந்தால் Paracetamol; Cetirizine (மருத்துவர்/மருந்தாளர் ஆலோசனையுடன்).","Steam inhalation; paracetamol if fever; cetirizine (with a doctor's or pharmacist's advice)."],
+ n:["தூதுவளை ரசம், மிளகு-மஞ்சள் பால், துளசி-இஞ்சி தேநீர், உப்பு நீர் கொப்பளிப்பு.","Thoothuvalai rasam, pepper-turmeric milk, tulsi-ginger tea, warm salt-water gargle."],
+ d:["5 நாளுக்கு மேல், மூச்சு திணறல், மார்பு வலி.","Over 5 days, breathing difficulty, chest pain."]},
+head:{ta:"தலைவலி",en:"Headache",q:"headache",
+ s:["தலை பாரம், ஒரு பக்க வலி, குமட்டல்.","Heavy head, one-sided pain, nausea."],
+ m:["Paracetamol; அமைதியான இடத்தில் ஓய்வு.","Paracetamol; rest in a quiet place."],
+ n:["சுக்கு/இஞ்சி தேநீர், நெற்றியில் குளிர்ந்த துணி, நிறைய நீர், தூக்கம்.","Dry-ginger/ginger tea, cold cloth on the forehead, plenty of water, sleep."],
+ d:["திடீர் கடும் வலி, பார்வை மங்கல், வாந்தி, BP அதிகம்.","Sudden severe pain, blurred vision, vomiting, high BP."]},
+stom:{ta:"வயிற்று வலி / அஜீரணம்",en:"Stomach pain / Indigestion",q:"stomach pain acidity",
+ s:["எரிச்சல், வயிறு உப்புசம், புளிப்பு ஏப்பம்.","Burning, bloating, sour belching."],
+ m:["Antacid (Gelusil போன்றவை); வாந்தி இருந்தால் ORS.","Antacid (e.g. Gelusil); ORS if vomiting."],
+ n:["சீரகத் தண்ணீர், இஞ்சி மோர், ஓமம்+உப்பு, புதினா; இட்லி, கஞ்சி போன்ற எளிய உணவு.","Cumin water, ginger buttermilk, ajwain with salt, mint; light food like idli or kanji."],
+ d:["கடும் வலி, ரத்தம், 2 நாளுக்கு மேல்.","Severe pain, blood, or lasting over 2 days."]},
+diar:{ta:"வயிற்றுப்போக்கு / நீர்ச்சத்து குறைவு",en:"Diarrhoea / Dehydration",q:"diarrhoea dehydration",
+ s:["தளர்ந்த மலம், தாகம், வாய் வறட்சி, சோர்வு.","Loose stools, thirst, dry mouth, weakness."],
+ m:["ORS கரைசல் அடிக்கடி. குழந்தைகளுக்கு Zinc (மருத்துவர் சொல்படி).","ORS solution often. Zinc for children (as the doctor advises)."],
+ n:["அரிசிக் கஞ்சி, உப்பு-சர்க்கரை நீர், நீர்மோர், வாழைப்பழம்.","Rice kanji, salt-sugar water, buttermilk, banana."],
+ d:["ஒரு நாளுக்கு மேல், ரத்தம், சிறுநீர் குறைவு, கடும் சோர்வு.","Over a day, blood in stool, little urine, extreme weakness."]},
+heat:{ta:"வெப்பத் தாக்கம்",en:"Heat stroke",q:"heat stroke",
+ s:["தலைசுற்றல், அதிக வியர்வை, தலைவலி, வாந்தி.","Dizziness, heavy sweating, headache, vomiting."],
+ m:["ORS; உடலை குளிர்விக்கவும்.","ORS; cool the body down."],
+ n:["நிழல், இளநீர், நீர்மோர், பானகம், ஈரத்துணி ஒத்தடம்.","Shade, tender coconut water, buttermilk, panakam, wet-cloth compress."],
+ d:["மயக்கம், குழப்பம், 104°F காய்ச்சல் — உடனே 108.","Fainting, confusion, 104°F fever: call 108 immediately."]},
+sugar:{ta:"சர்க்கரை நோய்",en:"Diabetes",q:"diabetes",
+ s:["அதிக தாகம், அடிக்கடி சிறுநீர், சோர்வு, காயம் ஆறாமை.","Excess thirst, frequent urination, tiredness, slow-healing wounds."],
+ m:["மருத்துவர் தந்த மாத்திரை/இன்சுலின் மட்டும், நேரத்துக்கு. நீங்களே அளவை மாற்ற வேண்டாம்.","Only the tablets/insulin your doctor prescribed, on time. Do not change the dose yourself."],
+ n:["வெந்தய நீர், நெல்லிக்காய், பாகற்காய், கீரை, சிறுதானியம், தினம் 30 நிமிட நடை (மருந்துக்கு மாற்று அல்ல).","Fenugreek water, amla, bitter gourd, greens, millets, a 30-minute walk daily (not a replacement for medicine)."],
+ d:["சர்க்கரை 300 மேல் அல்லது 60 கீழ், வாந்தி, மயக்கம். நடுக்கம்/வியர்வை வந்தால் உடனே சர்க்கரை/குளுக்கோஸ் நீர் குடித்து மருத்துவரை அணுகவும்.","Sugar above 300 or below 60, vomiting, fainting. If you shake or sweat suddenly, drink sugar/glucose water at once and see a doctor."]},
+bp:{ta:"உயர் இரத்த அழுத்தம்",en:"High blood pressure",q:"high blood pressure",
+ s:["தலைவலி, தலைசுற்றல், படபடப்பு (பலருக்கு அறிகுறி இல்லை).","Headache, dizziness, palpitations (many people have no symptoms)."],
+ m:["மருத்துவர் தந்த மாத்திரையை நிறுத்தாமல் எடுக்கவும்.","Take the tablets your doctor prescribed without stopping."],
+ n:["உப்பு குறைவு, வாழைப்பழம், பூண்டு, முருங்கைக்கீரை, நடை, தியானம், புகை/மது தவிர்.","Less salt, banana, garlic, drumstick leaves, walking, meditation; avoid smoking/alcohol."],
+ d:["180/120 மேல், நெஞ்சு வலி, பேச்சு குளறல் — உடனே 108.","Above 180/120, chest pain, slurred speech: call 108 immediately."]},
+body:{ta:"உடல் / மூட்டு வலி",en:"Body / Joint pain",q:"body joint pain",
+ s:["தசை வலி, மூட்டு விறைப்பு, சோர்வு.","Muscle ache, stiff joints, tiredness."],
+ m:["Paracetamol; வயிற்று பிரச்சனை அல்லது டெங்கு சந்தேகம் இருந்தால் Ibuprofen வேண்டாம்.","Paracetamol; avoid ibuprofen if you have stomach problems or suspect dengue."],
+ n:["வெந்நீர் ஒத்தடம், முடக்கத்தான் ரசம்/தோசை, நல்லெண்ணெய் மசாஜ், லேசான நீட்சி.","Hot compress, mudakathan rasam/dosa, sesame-oil massage, gentle stretching."],
+ d:["வீக்கம், காய்ச்சல்+சொறி, 1 வாரத்துக்கு மேல்.","Swelling, fever with rash, or lasting over a week."]},
+skin:{ta:"தோல் / பூஞ்சை அரிப்பு",en:"Skin / Fungal itching",q:"skin fungal itching",
+ s:["அரிப்பு, சிவப்பு தடிப்பு, ஈரப்பதமான இடங்களில்.","Itching, red patches, in moist areas."],
+ m:["Clotrimazole கிரீம் (மருத்துவர்/மருந்தாளர் ஆலோசனையுடன்).","Clotrimazole cream (with a doctor's or pharmacist's advice)."],
+ n:["வேப்பிலை-மஞ்சள் பூச்சு, பருத்தி உடை, பகுதியை உலர வைத்தல்.","Neem-turmeric paste, cotton clothes, keep the area dry."],
+ d:["பரவினால், சீழ், 2 வாரத்துக்கு மேல்.","If it spreads, pus, or lasts over 2 weeks."]},
+lowbp:{ta:"குறைந்த இரத்த அழுத்தம்",en:"Low blood pressure",q:"low blood pressure",
+ s:["தலைசுற்றல், மயக்கம், சோர்வு, பார்வை மங்கல், குளிர்ந்த வியர்வை.","Dizziness, faintness, tiredness, blurred vision, cold sweat."],
+ m:["BP மாத்திரை எடுத்தால் அளவை நீங்களே மாற்ற வேண்டாம்; மருத்துவரிடம் தெரிவிக்கவும்.","If you take BP tablets, do not change the dose yourself; tell your doctor."],
+ n:["உடனே உட்கார்ந்து/படுத்து கால்களை உயர்த்தவும்; உப்பு சேர்த்த நீர்/ORS, நீர்மோர் குடிக்கவும்; திடீரென எழ வேண்டாம்.","Sit or lie down and raise your legs; drink salted water/ORS or buttermilk; avoid standing up suddenly."],
+ d:["மயக்கம், நெஞ்சு வலி, மூச்சு திணறல், 15 நிமிடத்தில் சரியாகாவிட்டால் — 108.","Fainting, chest pain, breathlessness, or no improvement in 15 minutes: call 108."]},
+lowsugar:{ta:"குறைந்த சர்க்கரை",en:"Low blood sugar",q:"low blood sugar hypoglycemia",
+ s:["நடுக்கம், வியர்வை, படபடப்பு, பசி, குழப்பம்.","Shaking, sweating, palpitations, hunger, confusion."],
+ m:["மருத்துவர் தந்த மாத்திரை/இன்சுலின் அளவை நீங்களே மாற்ற வேண்டாம்; மருத்துவரிடம் தெரிவிக்கவும்.","Do not change your prescribed tablets/insulin yourself; inform your doctor."],
+ n:["விழிப்பாக இருந்தால் உடனே 3 ஸ்பூன் சர்க்கரை/குளுக்கோஸ் நீர் அல்லது பழச்சாறு குடிக்கவும்; 15 நிமிடத்தில் மீண்டும் பார்க்கவும்; பிறகு சிறிது உணவு சாப்பிடவும்.","If awake, drink 3 teaspoons of sugar/glucose in water or fruit juice right away, recheck in 15 minutes, then eat something light."],
+ d:["மயக்கம், விழுங்க முடியாமை, வலிப்பு — உடனே 108 (வாயில் எதுவும் ஊற்ற வேண்டாம்).","Unconscious, unable to swallow or seizure: call 108 (do not put anything in the mouth)."]}
+};
+const gn=k=>G[k]?x(G[k].ta,G[k].en):"";
+const gH=(k,o)=>{const g=G[k],nm=g?gn(k):(o||x("பிரச்சனை","Problem")),i=L==="en"?1:0;
+const q=encodeURIComponent((g?g.q:nm)+" treatment home remedies");
+return `<div class="card"><h3>${esc(nm)}</h3>`+(g?`<p><b>${x("அறிகுறி","Symptoms")}:</b> ${g.s[i]}</p><p><b>${x("மருந்து","Medicine")}:</b> ${g.m[i]}</p><p><b>${x("இயற்கை வழி","Natural way")}:</b> ${g.n[i]}</p><p><b>${x("மருத்துவரை பார்க்க","See a doctor if")}:</b> ${g.d[i]}</p>`:`<p>${x("இதற்கு தனிப்பட்ட வழிகாட்டி இல்லை. பொதுவாக: ஓய்வு, நிறைய நீர், எளிய உணவு. கடும் வலி, திடீர் அறிகுறி, 2–3 நாளுக்கு மேல் நீடித்தால் மருத்துவரை பாருங்கள்; நெஞ்சு வலி, மூச்சு திணறல், மயக்கம் இருந்தால் உடனே 108. கீழே இணையத்தில் மேலும் தேடலாம்.","There is no specific guide for this. In general: rest, drink plenty of fluids and eat light food. See a doctor if it is severe, sudden, or lasts over 2-3 days; call 108 for chest pain, breathlessness or fainting. You can search more online below.")}</p>`)+`<a class="g" href="https://www.google.com/search?q=${q}" target="_blank" rel="noopener">🔎 ${x("இணையத்தில் மேலும் தேடு","Search more online")}</a><p class="muted">${x("தகவல் விழிப்புணர்வுக்கு மட்டும். மருந்து எடுக்கும் முன் மருத்துவர்/மருந்தாளரிடம் கேளுங்கள்.","For awareness only. Ask a doctor or pharmacist before taking any medicine.")}</p></div>`};
+
+/* ---------- Registration ---------- */
+const fl=(id,l,t="text")=>`<label for="${id}">${l}</label><input id="${id}" type="${t}">`;
+const hosp=n=>`<div class="card" style="margin:8px 0"><b>${x("மருத்துவமனை","Hospital")} ${n}</b>${fl("h"+n+"n",x("பெயர்","Name"))}<div class="row"><div><label for="h${n}t">${x("வகை","Type")}</label><select id="h${n}t"><option value="அரசு">${x("அரசு","Govt")}</option><option value="தனியார்">${x("தனியார்","Private")}</option></select></div><div>${fl("h"+n+"p",x("தொலைபேசி","Phone"),"tel")}</div></div></div>`;
+const F=["n","ph","em","ag","sx","wt","dist","loc","f1n","f1p","f2n","f2p","gn","gp","h1n","h1t","h1p","h2n","h2t","h2p","cot"];
+let gpsPos=null;
+const opt=()=>`<span class="muted"> (${x("விருப்பம்","optional")})</span>`;
+const rqf=(id,l,why,t="text")=>`<label for="${id}">${l} <span style="color:var(--bad)" aria-hidden="true">*</span></label><input id="${id}" type="${t}" aria-required="true"><div class="muted">${x("தேவை","Required")}: ${why}</div>`;
+const of=(id,l,t="text",hint="")=>`<label for="${id}">${l}${opt()}</label><input id="${id}" type="${t}">${hint?`<div class="muted">${hint}</div>`:""}`;
+function buildReg(vals){
+  const v=vals||{};
+  $("reg").innerHTML=`<div class="card"><h3>${x("ஏற்கனவே பதிவு செய்தவரா? உள்நுழை","Already registered? Sign in")}</h3>${fl("si","Email","email")}<button class="p" id="sib" type="button">${x("உள்நுழை","Sign in")}</button><p class="muted">${x("தகவல் இந்த போனில் மட்டுமே சேமிக்கப்படும்; எங்கும் அனுப்பப்படாது.","Your data is stored only on this phone and is not sent anywhere.")}</p></div>
+  <div class="card"><h2>${x("உங்களைப் பற்றி","About you")}</h2>
+  <p class="muted"><span style="color:var(--bad)">*</span> ${x("தேவை. மற்றவை எல்லாம் விருப்பமானவை. தெரியவில்லை என்றால் காலியாக விடலாம்; பிறகு Profile பக்கத்தில் சேர்க்கலாம். சேர்த்த தகவலை மட்டுமே app பயன்படுத்தும்.","Required. Everything else is optional: leave it blank if you don't know it and add it later from the Profile page. The app only uses what you provide.")}</p>
+  ${rqf("n",x("பெயர்","Name"),x("உங்கள் டாஷ்போர்டை தனிப்படுத்த","to personalise your health dashboard"))}
+  ${rqf("em","Email",x("இந்த போனில் உங்கள் தகவலை சேமிக்கவும், உள்நுழையவும்","to save your profile on this phone and sign in"),"email")}
+  <h3 style="margin-top:14px">${x("உங்களைப் பற்றி (விருப்பம்)","More about you (optional)")}</h3>
+  ${of("ag",x("வயது","Age"),"number",x("வெப்ப எச்சரிக்கை, சர்க்கரை ஆபத்து சோதனைக்கு பயன்படும். தெரியவில்லை என்றால் காலியாக விடவும்.","Used for heat alerts and the diabetes risk check. Leave blank if you don't know."))}
+  <label for="sx">${x("பாலினம்","Gender")}${opt()}</label><select id="sx"><option value="">${x("கொடுக்கவில்லை","Not provided")}</option><option value="m">${x("ஆண்","Male")}</option><option value="f">${x("பெண்","Female")}</option><option value="x">${x("சொல்ல விரும்பவில்லை","Prefer not to say")}</option></select>
+  ${of("wt",x("எடை (kg)","Weight (kg)"),"number")}${of("ph",x("உங்கள் தொலைபேசி","Your phone (10 digits)"),"tel")}
+  <label for="dist">${x("மாவட்டம்","District")}${opt()}</label><select id="dist"><option value="">${x("— இப்போது தவிர்","— Skip for now —")}</option>${P.map((q,i)=>`<option value="${i}">${q[0]}</option>`).join("")}</select><div class="muted">${x("வானிலை எச்சரிக்கைக்கு மட்டும் தேவை.","Needed only to show weather alerts.")}</div>
+  ${of("loc",x("ஊர் / தெரு","Town / street"))}<button class="g" id="gps" type="button">📍 ${x("GPS பயன்படுத்து","Use GPS")}</button>
+  <h3 style="margin-top:14px">${x("அவசர தொடர்பு (விருப்பம்)","Emergency contacts (optional)")}</h3><p class="muted">${x("அவசர அழைப்பு/SMS பொத்தான்களுக்கு மட்டும் தேவை. பிறகும் சேர்க்கலாம்.","Needed only for the emergency call and SMS buttons. You can add them later.")}</p>
+  <div class="row"><div>${fl("f1n",x("நபர் 1 பெயர்","Person 1 name"))}</div><div>${fl("f1p",x("தொலைபேசி","Phone"),"tel")}</div><div>${fl("f2n",x("நபர் 2 பெயர்","Person 2 name"))}</div><div>${fl("f2p",x("தொலைபேசி","Phone"),"tel")}</div><div>${fl("gn",x("பாதுகாவலர் பெயர்","Guardian name"))}</div><div>${fl("gp",x("தொலைபேசி","Phone"),"tel")}</div></div>
+  <h3 style="margin-top:14px">${x("அருகிலுள்ள மருத்துவமனை (விருப்பம்)","Nearby hospitals (optional)")}</h3>${hosp(1)}${hosp(2)}
+  <h3 style="margin-top:14px">${x("உங்களுக்கு உள்ள நிலை (விருப்பம்)","Health conditions (optional)")}</h3><p class="muted">${x("தெரிந்ததை மட்டும் குறியுங்கள். எதுவும் குறிக்காவிட்டால் எந்த நோயும் இருப்பதாக app கருதாது.","Tick only what you know. If you tick nothing, the app will not assume you have any condition.")}</p>
+  <label class="cb"><input type="checkbox" id="cs"> ${x("சர்க்கரை நோய்","Diabetes")}</label><label class="cb"><input type="checkbox" id="cb"> ${x("இரத்த அழுத்தம் (BP)","Blood pressure (BP)")}</label><label class="cb"><input type="checkbox" id="co"> ${x("வேறு","Other")}</label>${fl("cot",x("வேறு நிலை (எழுதவும்)","Other condition (type)"))}
+  <button class="p" id="rs" type="button">${x("சேமித்து தொடங்கு","Save & start")}</button></div>`;
+  F.forEach(k=>{if(v[k]!==undefined)$(k).value=v[k]});["cs","cb","co"].forEach(k=>{if(v[k])$(k).checked=true});
+  $("gps").onclick=()=>navigator.geolocation?navigator.geolocation.getCurrentPosition(g=>{gpsPos=[g.coords.latitude,g.coords.longitude];$("gps").textContent="📍 "+x("கிடைத்தது ✓","Got it ✓")},()=>alert(x("இடம் அனுமதி இல்லை. மாவட்டத்தை தேர்வு செய்யவும்.","Location permission denied. Please choose your district."))):0;
+  $("rs").onclick=()=>{
+    const g=id=>$(id).value.trim(),em=g("em").toLowerCase(),ph=/^\d{10}$/;
+    if(!g("n")||!/^\S+@\S+\.\S+$/.test(em)){alert(x("இந்த தகவல் தொடர தேவை. பெயர்: டாஷ்போர்டை தனிப்பயனாக்க. Email: இந்த போனில் உங்கள் profile-ஐ சேமிக்க.","This information is required to continue. Name: to personalise your dashboard. Email: to save your profile on this phone."));return}
+    if(["ph","f1p","f2p","gp","h1p","h2p"].some(k=>g(k)&&!ph.test(g(k)))){alert(x("தொலைபேசி 10 இலக்கமாக இருக்க வேண்டும் (அல்லது காலியாக விடவும்).","Phone numbers must have 10 digits (or leave them blank)."));return}
+    if(g("ag")&&!(+g("ag")>=1&&+g("ag")<=120)){alert(x("வயதை சரிபார்க்கவும் (அல்லது காலியாக விடவும்).","Please check the age (or leave it blank)."));return}
+    const p={};F.forEach(k=>p[k]=g(k));p.em=em;p.email=em;p.cs=$("cs").checked;p.cb=$("cb").checked;p.co=$("co").checked;
+    if(gpsPos){p.lat=gpsPos[0];p.lon=gpsPos[1]}
+    const o=gl("ak_u_"+em);U=o||{log:[],day:{}};U.p=p;save();enter();
+  };
+  $("sib").onclick=()=>{const e=$("si").value.trim().toLowerCase(),u=gl("ak_u_"+e);if(u){U=u;save();enter()}else alert(x("இந்த போனில் இந்த email-க்கு பதிவு இல்லை. கீழே புதிதாக பதிவு செய்யவும்.","No record for this email on this phone. Please register below."))};
+}
+function regVals(){const v={};F.forEach(k=>{const e=$(k);if(e)v[k]=e.value});["cs","cb","co"].forEach(k=>{const e=$(k);if(e)v[k]=e.checked});return v}
+
+/* ---------- Navigation ---------- */
+const T=[["home","முகப்பு","Home"],["chk","இன்று","Today"],["hlth","உடல்நல கண்காணிப்பு","Health Monitor"],["med","மருந்து","Medicine"],["guide","மருத்துவம்","Health guide"],["prof","என் தகவல்","My info"],["hist","வரலாறு","History"]];
+const R={home:()=>rHome(),chk:()=>rChk(),hist:()=>rHist(),guide:()=>rGuide(),hlth:()=>rHlth(),med:()=>rMed(),prof:()=>rProf()};
+function buildNav(){$("nav").innerHTML="";T.forEach(([id,ta,en])=>{const b=document.createElement("button");b.textContent=x(ta,en);b.dataset.id=id;b.setAttribute("role","tab");b.onclick=()=>show(id);$("nav").append(b)})}
+function show(id){tab=id;T.forEach(([k])=>$(k).classList.toggle("on",k===id));[...$("nav").children].forEach(b=>b.setAttribute("aria-selected",b.dataset.id===id));R[id]();scrollTo(0,0)}
+function head(){$("h1").textContent=x("ArogyaKaval · ஆரோக்ய காவல்","ArogyaKaval · Health Guard");$("hp").textContent=x("உங்கள் தினசரி ஆரோக்ய துணை","Your daily health companion");$("lg").textContent=L==="en"?"தமிழ்":"English";document.documentElement.lang=L==="en"?"en":"ta"}
+function enter(){$("reg").hidden=true;$("nav").hidden=false;$("app").hidden=false;buildNav();show("home")}
+function showReg(p){$("reg").hidden=false;$("nav").hidden=true;$("app").hidden=true;buildReg(p)}
+$("lg").onclick=()=>{
+  const inReg=!$("reg").hidden,v=inReg?regVals():null;
+  L=L==="en"?"ta":"en";sl("ak_lang",L);head();
+  if(inReg)buildReg(v);else{buildNav();show(tab)}
+};
+
+/* ---------- Weather (with offline cache) ---------- */
+const sum=a=>a.reduce((p,q)=>p+(q||0),0);
+async function wx(){
+  const p=U.p,c=P[p.dist];if(!c&&!p.lat)return "noloc";const la=p.lat||c[1],lo=p.lon||c[2];
+  try{
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,relative_humidity_2m&daily=apparent_temperature_max,precipitation_sum&past_days=7&forecast_days=3&timezone=auto`);
+    const d=await r.json(),dl=d.daily;
+    U.w={at:Date.now(),t:d.current.temperature_2m,h:d.current.relative_humidity_2m,hi:dl.apparent_temperature_max[7],r7:sum(dl.precipitation_sum.slice(0,7)),r:[dl.precipitation_sum[7],dl.precipitation_sum[8],dl.precipitation_sum[9]]};
+    save();return false;
+  }catch(e){return true}
+}
+const elder=()=>+U.p.ag>=60;
+const hiLvl=hi=>{const t=elder()?[34,39,43]:[37,41,45];return hi>=t[2]?2:hi>=t[1]?1:hi>=t[0]?0.5:0};
+async function rHome(){
+  const el=$("home"),p=U.p;U.dis=U.dis||{};
+  const greet=`<h2>${x("வணக்கம்","Hello")} ${esc(p.n)} 👋</h2>`;
+  el.innerHTML=`<div class="card">${greet}<p class="muted">${x("வானிலை ஏற்றுகிறது…","Loading weather…")}</p></div>`;
+  const off=await wx();if(tab!=="home")return;
+  const w=U.w,c=P[p.dist];let tp="";
+  if(off==="noloc")tp=`<div class="card">${greet}</div>`+lvl("warn",x("வானிலை எச்சரிக்கைக்கு மாவட்டம் தேவை","Add your district to see weather alerts"),x("இதை முன்பு தவிர்த்தீர்கள். Profile பக்கத்தில் எப்போது வேண்டுமானாலும் சேர்க்கலாம்.","You skipped this earlier. You can add it any time from the Profile page.")+` <button class="g" onclick="show('prof')">${x("Profile","Go to Profile")}</button>`);
+  else if(!w)tp=`<div class="card">${greet}</div>`+lvl("warn",x("வானிலை இல்லை","No weather data"),x("இணையம் இணைந்ததும் இங்கே காட்டப்படும்.","It will appear here once you are online."));
+  else{
+    const when=new Date(w.at).toLocaleString(L==="en"?"en-IN":"ta-IN");
+    let a="";const hl=hiLvl(w.hi),hv=w.hi.toFixed(0);
+    if(hl>=2)a+=lvl("bad",x("🔥 கடும் வெப்பம்","🔥 Extreme heat"),x(`உணர்வு வெப்பம் ${hv}°C. 12–4 மணி வெளியே செல்ல வேண்டாம். ORS/நீர்மோர் குடியுங்கள். தலைசுற்றினால் நிழலுக்கு சென்று 108.`,`Feels like ${hv}°C. Avoid going out between 12 and 4 PM. Drink ORS or buttermilk. If you feel dizzy, move to shade and call 108.`));
+    else if(hl>=1)a+=lvl("warn",x("☀️ அதிக வெப்பம்","☀️ High heat"),x(`உணர்வு வெப்பம் ${hv}°C. தொப்பி/துண்டு, 30 நிமிடத்துக்கு ஒருமுறை தண்ணீர்.`,`Feels like ${hv}°C. Wear a cap or towel and drink water every 30 minutes.`));
+    else if(hl>0)a+=lvl("warn",x("சற்று வெப்பம்","Slightly warm"),x(`உணர்வு வெப்பம் ${hv}°C. நிறைய நீர் குடியுங்கள்.`,`Feels like ${hv}°C. Drink plenty of water.`));
+    const rn=(i,lt,le)=>{const m=w.r[i].toFixed(0);return w.r[i]>=10?lvl("bad",x("🌧️ "+lt+" கனமழை வாய்ப்பு","🌧️ Heavy rain likely "+le),x(`${m} mm. குடை எடுங்கள், தாழ்வான இடம், மின்கம்பம் அருகே செல்ல வேண்டாம். தண்ணீர் தேங்காமல் பாருங்கள் (கொசு/டெங்கு).`,`${m} mm. Carry an umbrella, avoid low-lying areas and electric poles. Don't let water stagnate (mosquitoes/dengue).`)):w.r[i]>=2?lvl("warn",x("🌦️ "+lt+" மழை வாய்ப்பு","🌦️ Rain likely "+le),x(`${m} mm. குடை எடுத்துச் செல்லுங்கள்.`,`${m} mm. Carry an umbrella.`)):""};
+    a+=rn(0,"இன்று","today")+rn(1,"நாளை","tomorrow")+rn(2,"நாளை மறுநாள்","day after tomorrow");
+    if(w.r7>=20&&w.h>=60)a+=lvl("warn",x("🦟 கொசு உற்பத்திக்கு ஏற்ற சூழல்","🦟 Conditions favourable for mosquitoes"),x(`கடந்த 7 நாளில் ${w.r7.toFixed(0)} mm மழை. டயர், சட்டி, தொட்டியில் நீர் தேங்காமல் பார்க்கவும். காய்ச்சல் 2 நாளுக்கு மேல் இருந்தால் பரிசோதனை.`,`${w.r7.toFixed(0)} mm of rain in the last 7 days. Don't let water collect in tyres, pots or tanks. Get tested if fever lasts over 2 days.`));
+    if(!a)a=lvl("ok",x("எல்லாம் சாதாரணம்","All normal"),x("இன்று பெரிய வானிலை எச்சரிக்கை இல்லை.","No major weather alert today."));
+    tp=`<div class="card">${greet}
+    <div class="muted">${off?"📴 "+x("Offline — கடைசியாக புதுப்பித்தது: ","Offline — last updated: ")+when:"🟢 "+x("புதுப்பிக்கப்பட்டது: ","Updated: ")+when} · ${esc(p.lat?"GPS":c[0])}</div>
+    <div class="stats" style="margin-top:8px"><div><div class="big">${w.t.toFixed(0)}°</div><span class="muted">${x("வெப்பம்","Temp")}</span></div><div><div class="big">${w.h}%</div><span class="muted">${x("ஈரப்பதம்","Humidity")}</span></div><div><div class="big">${w.r[0].toFixed(0)}</div><span class="muted">${x("இன்று மழை mm","Rain today (mm)")}</span></div></div></div>${a}`;
+  }
+  const hs=[1,2].filter(n=>p["h"+n+"n"]).map(n=>`<a class="g" href="tel:${esc(p["h"+n+"p"])}">🏥 ${esc(p["h"+n+"n"])} (${ht(p["h"+n+"t"])})</a>`).join("");
+  const fam=[["f1n","f1p"],["f2n","f2p"],["gn","gp"]].filter(q=>p[q[1]]).map(q=>`<a class="g" href="tel:${esc(p[q[1]])}">📞 ${esc(p[q[0]]||x("குடும்பம்","Family"))}</a>`).join("");
+  const sms=[p.f1p,p.f2p,p.gp].filter(Boolean)[0];
+  const cp=(!sms&&!U.dis.contact)?`<div class="card"><h3>${x("அவசர தொடர்பு சேர்க்கவும்","Add an emergency contact")}</h3><p class="muted">${x("அவசர அழைப்பு/SMS பொத்தான்களுக்கு இது தேவை. தவிர்க்கலாம்; Profile பக்கத்தில் பிறகு சேர்க்கலாம்.","This is needed for the emergency call and SMS buttons. You can skip it and add it later from the Profile page.")}</p><button class="p" onclick="showReg(Object.assign({},U.p))">${x("இப்போது சேர்","Add now")}</button> <button class="g" onclick="U.dis.contact=true;save();rHome()">${x("இப்போது வேண்டாம்","Not now")}</button></div>`:"";
+  el.innerHTML=tp+cp+`<div class="card"><h3>${x("அவசர உதவி","Emergency help")}</h3>${fam}${hs}${sms?`<a class="g" href="sms:${esc(sms)}?body=${encodeURIComponent(x("எனக்கு உடம்பு சரியில்லை, உதவி தேவை. – ","I am not feeling well and need help. – ")+p.n)}">✉️ ${x("குடும்பத்துக்கு SMS","SMS to family")}</a>`:""}<a class="g" target="_blank" rel="noopener" href="https://www.google.com/maps/search/hospital+near+me">🗺️ ${x("அருகில் மருத்துவமனை","Nearby hospitals")}</a></div>`;
+}
+
+/* ---------- Today: check-in + daily questions ---------- */
+const dayO=()=>(U.day[td()]=U.day[td()]||{w:0,m:null,r:null,t:null});
+const nm=e=>e.k==="none"?x("பிரச்சனை இல்லை","No problem"):G[e.k]?gn(e.k):e.o;
+function rChk(){
+  const t=td(),p=U.p;
+  const pend=U.log.map((e,i)=>({e,i})).filter(q=>q.e.k!=="none"&&!q.e.rec&&q.e.d<t);
+  const today=U.log.filter(e=>e.d===t);
+  let h="";
+  if(pend.length)h+=`<h2>${x("உடம்பு எப்படி இருக்கு?","How are you feeling?")}</h2>`+pend.map(({e,i})=>`<div class="card"><b>${esc(nm(e))}</b> <span class="muted">(${e.d})</span><br>${x("இப்போ சரி ஆச்சா?","Has it got better?")}<br><button class="p" onclick="fu(${i},true)">${x("சரி ஆச்சு ✅","Yes, recovered ✅")}</button> <button class="g" onclick="fu(${i},false)">${x("இன்னும் சரி ஆகல","Still not better")}</button><div id="fu${i}"></div></div>`).join("");
+  h+=`<h2>${x("இன்னைக்கு ஏதாவது பிரச்சனை?","Any problem today?")}</h2><div class="card"><label for="iss">${x("பிரச்சனை தேர்வு செய்யவும்","Choose a problem")}</label><select id="iss"><option value="none">${x("பிரச்சனை இல்லை 😊","No problem 😊")}</option>${Object.keys(G).map(k=>`<option value="${k}">${gn(k)}</option>`).join("")}<option value="other">${x("வேறு (நீங்களே எழுதவும்)","Other (type it yourself)")}</option></select>
+  <input id="oth" placeholder="${x("என்ன பிரச்சனை என்று எழுதவும்","Type what the problem is")}" hidden style="margin-top:8px"><button class="p" id="isb" type="button">${x("பதிவு செய்","Save")}</button><div id="isr"></div>
+  ${today.length?`<p class="muted">${x("இன்றைய பதிவுகள்: ","Today's entries: ")}${today.map(e=>esc(nm(e))).join(", ")}</p>`:""}</div>`;
+  const d=dayO(),tg=U.w&&U.w.hi>=37?12:8,sick=U.log.some(e=>e.k!=="none"&&!e.rec);
+  const yn=(k,q)=>`<div style="margin:10px 0"><div>${q}</div><button class="g ${d[k]===true?"sel":""}" onclick="an('${k}',true)">${x("ஆம்","Yes")}</button><button class="g ${d[k]===false?"sel":""}" onclick="an('${k}',false)">${x("இல்லை","No")}</button></div>`;
+  const hasMed=p.cs||p.cb||p.co;let fb="";
+  if(d.w<tg)fb+=`<p>💧 ${x(`இன்னும் ${tg-d.w} டம்ளர் தண்ணீர் குடிக்கலாம்.`,`You can drink ${tg-d.w} more glasses of water.`)}</p>`;
+  if(d.m===false)fb+=`<p>🍚 ${p.cs?x("சர்க்கரை உள்ளவர்கள் நேரத்துக்கு சாப்பிட வேண்டும், நீண்ட பட்டினி வேண்டாம்.","People with diabetes should eat on time and avoid long gaps without food."):x("எளிய உணவு (இட்லி, கஞ்சி) சாப்பிடுங்கள்.","Eat something light (idli, kanji).")}</p>`;
+  if(d.r===false)fb+=`<p>🛌 ${x("இன்று சிறிது ஓய்வு எடுங்கள்.","Take some rest today.")}</p>`;
+  if(hasMed&&d.t===false)fb+=`<p>💊 ${x("மருத்துவர் சொன்ன மாத்திரையை நேரத்துக்கு எடுங்கள். தவறினால் மருத்துவரிடம் கேளுங்கள்.","Take your prescribed tablets on time. If you missed a dose, ask your doctor.")}</p>`;
+  h+=`<h2>${sick?x("உடம்பு சரியில்லாத போது — இன்றைய கவனிப்பு","While unwell — today's care"):x("இன்றைய தினசரி கவனிப்பு","Today's daily care")}</h2><div class="card">
+  <div>💧 ${x("தண்ணீர்","Water")}: <b>${d.w}</b> / ${tg} ${x("டம்ளர்","glasses")} ${U.w&&U.w.hi>=37?x("(வெப்பம் அதிகம்)","(hot weather)"):""}<br><button class="g" onclick="wt(1)">${x("+1 டம்ளர்","+1 glass")}</button><button class="g" onclick="wt(-1)">−1</button></div>
+  ${yn("m","🍚 "+x("நேரத்துக்கு சாப்பிட்டீங்களா?","Did you eat on time?"))}${yn("r","🛌 "+x("ஓய்வு எடுத்தீங்களா?","Did you rest?"))}${hasMed?yn("t","💊 "+x("மாத்திரை போட்டீங்களா?","Did you take your tablets?")):""}
+  ${p.cs?`<p class="muted">${x("சர்க்கரை நோயாளிகள்: 3 வேளை நேரத்துக்கு சாப்பிடுங்கள், இடைவெளி அதிகம் வேண்டாம்.","If you have diabetes: eat 3 meals on time and avoid long gaps.")}</p>`:""}${fb}</div>`;
+  $("chk").innerHTML=h;
+  $("iss").onchange=()=>$("oth").hidden=$("iss").value!=="other";
+  $("isb").onclick=()=>{
+    const k=$("iss").value,o=$("oth").value.trim();
+    if(k==="other"&&!o){alert(x("பிரச்சனையை எழுதவும்","Please type the problem"));return}
+    U.log.push({d:t,k:k,o:o,rec:k==="none"});save();
+    $("isr").innerHTML=k==="none"?lvl("ok",x("நல்லது!","Great!"),x("இன்று உடல்நலம் நன்றாக இருப்பதில் மகிழ்ச்சி.","Glad you are doing well today.")):gH(k==="other"?"":k,o);
+  };
+}
+function fu(i,ok){const e=U.log[i];if(ok){e.rec=true;save();rChk()}else $("fu"+i).innerHTML=gH(e.k==="other"?"":e.k,e.o)+lvl("warn",x("இன்று இவற்றை செய்யுங்கள்","Do these today"),x("நிறைய தண்ணீர் குடியுங்கள், நேரத்துக்கு எளிய உணவு, ஓய்வு, மருத்துவர் சொன்ன மாத்திரை. 2–3 நாளில் சரியாகாவிட்டால் மருத்துவரை அணுகுங்கள்.","Drink plenty of water, eat light food on time, rest, and take your prescribed tablets. If it is not better in 2-3 days, see a doctor."))}
+function wt(n){const d=dayO();d.w=Math.max(0,d.w+n);save();rChk()}
+function an(k,v){dayO()[k]=v;save();rChk()}
+
+/* ---------- History ---------- */
+function rHist(){
+  let h="",cnt={},days=0;
+  const mk=v=>v==null?"–":v?"✔":"✘";
+  for(let i=0;i<7;i++){
+    const d=ago(i),es=U.log.filter(e=>e.d===d),dd=U.day[d],pr=es.filter(e=>e.k!=="none");
+    if(pr.length)days++;pr.forEach(e=>{const n=nm(e);cnt[n]=(cnt[n]||0)+1});
+    h+=`<div class="card"><b>${d}</b>${i===0?x(" (இன்று)"," (today)"):""}<br>`+(es.length?es.map(e=>`<span class="chip">${esc(nm(e))}${e.k!=="none"?(e.rec?" ✅":" ⏳"):""}</span>`).join(""):`<span class="muted">${x("பதிவு இல்லை","No entry")}</span>`)+(dd?`<div class="muted">💧 ${dd.w} ${x("டம்ளர்","glasses")} · ${x("சாப்பாடு","Food")} ${mk(dd.m)} · ${x("ஓய்வு","Rest")} ${mk(dd.r)} · ${x("மாத்திரை","Tablet")} ${mk(dd.t)}</div>`:"")+"</div>";
+  }
+  const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+  const sm=days?x(`கடந்த 7 நாளில் <b>${days}</b> நாள் பிரச்சனை பதிவாகியுள்ளது.${top?` அதிகம்: <b>${esc(top[0])}</b> (${top[1]} முறை).`:""}${top&&top[1]>=3?`<br><b>ஒரே பிரச்சனை பலமுறை வந்துள்ளது — மருத்துவரை பார்ப்பது நல்லது.</b>`:""}`,`You logged a problem on <b>${days}</b> of the last 7 days.${top?` Most frequent: <b>${esc(top[0])}</b> (${top[1]} times).`:""}${top&&top[1]>=3?`<br><b>The same problem has come up several times, so it is a good idea to see a doctor.</b>`:""}`):x("இந்த வாரம் பிரச்சனை பதிவு இல்லை. 👍","No problems logged this week. 👍");
+  $("hist").innerHTML=`<h2>${x("கடந்த 7 நாள்","Last 7 days")}</h2><div class="card">${sm}</div>`+h;
+}
+
+/* ---------- Guide ---------- */
+function rGuide(k,o){
+  $("guide").innerHTML=`<h2>${x("நோய் வழிகாட்டி","Health guide")}</h2><div>${Object.keys(G).map(q=>`<button class="g ${q===k?"sel":""}" onclick="rGuide('${q}')">${gn(q)}</button>`).join("")}<button class="g ${k==="_o"?"sel":""}" onclick="rGuide('_o')">${x("வேறு","Other")}</button></div><div style="margin-top:10px">${k==="_o"?`<div class="card"><label for="go">${x("உங்கள் பிரச்சனையை எழுதுங்கள்","Type your problem")}</label><input id="go" value="${esc(o||"")}"><button class="p" onclick="rGuide('_o',$('go').value.trim())">${x("வழிகாட்டி காட்டு","Show guidance")}</button></div>`+(o?gH("",o):""):k?gH(k):`<p class="muted">${x("மேலே ஒரு பிரச்சனையை தேர்வு செய்யவும்.","Choose a problem above.")}</p>`}</div>`;
+}
+
+/* ---------- Health Monitor (add a metric = add one entry to MON) ---------- */
+function qk(k){
+  const M={lowbp:["warn",x("குறைந்த BP","Low BP"),"lowbp"],highbp:["bad",x("அதிக BP","High BP"),"bp"],lowsg:["warn",x("குறைந்த சர்க்கரை","Low sugar"),"lowsugar"],highsg:["bad",x("அதிக சர்க்கரை","High sugar"),"sugar"]},e=M[k];
+  $("qo").innerHTML=e?lvl(e[0],e[1],x("கீழே உள்ள வழிகாட்டியை பாருங்கள். மோசமானால் மருத்துவரை அணுகுங்கள்.","See the guidance below. If it gets worse, see a doctor."))+gH(e[2]):lvl("ok",x("சாதாரணம்","Normal"),x("நல்ல நிலை. தொடர்ந்து கவனியுங்கள்.","Looks fine. Keep monitoring."));
+}
+/* f = [key, Tamil label, English label, min, max] (min/max only catch typing mistakes) */
+const MON=[
+ {id:"bp",ic:"❤️",ta:"இரத்த அழுத்தம்",en:"Blood Pressure",u:"mmHg",f:[["s","மேல் (Systolic)","Upper (Systolic)",50,300],["d","கீழ் (Diastolic)","Lower (Diastolic)",30,200]]},
+ {id:"sugar",ic:"🩸",ta:"இரத்த சர்க்கரை",en:"Blood Sugar",u:"mg/dL",ctx:1,f:[["glu","சர்க்கரை","Glucose",20,800]]},
+ {id:"temp",ic:"🌡️",ta:"உடல் வெப்பநிலை",en:"Temperature",u:"°C",f:[["temp","வெப்பநிலை (°C)","Temperature (°C)",30,45]]},
+ {id:"hr",ic:"💓",ta:"இதய துடிப்பு",en:"Heart Rate",u:"bpm",f:[["hr","இதய துடிப்பு","Heart rate",20,250]]},
+ {id:"spo2",ic:"🫁",ta:"SpO₂ / ஆக்ஸிஜன்",en:"SpO₂ / Oxygen Saturation",u:"%",f:[["spo2","SpO₂","SpO₂",50,100]]},
+ {id:"wt",ic:"⚖️",ta:"எடை",en:"Weight",u:"kg",f:[["wt","எடை (kg)","Weight (kg)",2,300]]}
+];
+const SC={f:["வெறும் வயிற்றில்","Fasting"],a:["சாப்பிட்ட 2 மணி நேரம் பின்","2 hours after a meal"],r:["எப்போது வேண்டுமானாலும்","Random"],"":["தெரியவில்லை","I don't know"]};
+const mn=m=>x(m.ta,m.en),mHas=(e,m)=>e[m.f[0][0]]!=null,mvf=(e,m)=>m.f.map(f=>e[f[0]]).join("/");
+const mList=m=>(U.vit||[]).filter(e=>mHas(e,m)).sort((a,b)=>a.ts-b.ts);
+const locL=()=>L==="en"?"en-IN":"ta-IN";
+function when(ts){const d=new Date(ts),k=dstr(d);return (k===td()?x("இன்று","Today"):k===ago(1)?x("நேற்று","Yesterday"):d.toLocaleDateString(locL(),{day:"numeric",month:"short",year:"numeric"}))+", "+d.toLocaleTimeString(locL(),{hour:"numeric",minute:"2-digit"})}
+/* commonly used adult reference ranges. 0 = in range / no range, 1 = outside usual range, 2 = possibly urgent. Not a diagnosis. */
+function rng(id,e){
+  if(id==="bp"){if(e.s>=180||e.d>=120||e.s<80)return 2;if(e.s>=140||e.d>=90||e.s<90||e.d<60)return 1}
+  if(id==="sugar"){const g=e.glu,c=e.sc;if(g<54||g>300)return 2;if(g<70||(c==="f"&&g>=100)||(c==="a"&&g>=140)||(c!=="f"&&c!=="a"&&g>=200))return 1}
+  if(id==="temp"){if(e.temp>=40||e.temp<35)return 2;if(e.temp>=37.8||e.temp<35.5)return 1}
+  if(id==="hr"){if(e.hr<40||e.hr>130)return 2;if(e.hr<60||e.hr>100)return 1}
+  if(id==="spo2"){if(e.spo2<90)return 2;if(e.spo2<95)return 1}
+  return 0;
+}
+const gk=(id,e)=>id==="bp"?(e.s<90||e.d<60?"lowbp":"bp"):id==="sugar"?(e.glu<70?"lowsugar":"sugar"):id==="temp"?"fever":"";
+let openM=null,fbM=null,mh={id:null,r:"7",from:"",to:""};
+function mo(id){openM=id;fbM=null;rHlth();const f=$("mv_"+MON.find(q=>q.id===id).f[0][0]);if(f)f.focus()}
+function mc(){openM=null;rHlth()}
+function mhs(id){mh.id=id;rHlth()}
+function msave(id){
+  const m=MON.find(q=>q.id===id),e={ts:Date.now()},bad=[];
+  m.f.forEach(f=>{const v=$("mv_"+f[0]).value.trim(),n=+v;if(v===""||isNaN(n)||n<f[3]||n>f[4])bad.push(x(f[1],f[2])+" ("+f[3]+"–"+f[4]+")");else e[f[0]]=n});
+  const er=t=>$("me_"+id).innerHTML=lvl("warn",x("மதிப்பை சரிபார்க்கவும்","Please check the value"),t);
+  if(bad.length){er(bad.join(", "));return}
+  if(id==="bp"&&e.s<=e.d){er(x("மேல் எண் கீழ் எண்ணை விட அதிகமாக இருக்க வேண்டும்.","The upper number should be higher than the lower number."));return}
+  if(m.ctx)e.sc=$("mv_sc").value;
+  U.vit=U.vit||[];U.vit.push(e);save();
+  const lv=rng(id,e);let h;
+  if(!lv)h=lvl("ok",x("பதிவு செய்யப்பட்டது","Saved"),m.id==="wt"?"":x("இந்த அளவு வழக்கமான பெரியவர் வரம்புக்குள் உள்ளது.","This reading looks within the usual adult reference range."));
+  else{h=lvl(lv>1?"bad":"warn",x("மீண்டும் சரிபார்க்கவும்","Please double-check"),x("இந்த அளவு வழக்கமான வரம்புக்கு வெளியே இருக்கலாம். மீண்டும் ஒருமுறை அளந்து பாருங்கள்; தேவைப்பட்டால் மருத்துவரிடம் பேசுங்கள்.","This reading may be outside the usual reference range. Consider checking the measurement again and discussing it with a healthcare professional if needed.")+(lv>1?`<br><b>${x("நெஞ்சு வலி, மூச்சு திணறல், மயக்கம், குழப்பம், கடும் சோர்வு போன்ற அறிகுறிகளும் இருந்தால் உடனே மருத்துவ உதவி பெறுங்கள் (108).","If you also have symptoms such as chest pain, breathlessness, fainting, confusion or severe weakness, seek medical care now (call 108).")}</b>`:"")+`<br><span class="muted">${x("வரம்புகள் பெரியவர்களுக்கானவை. இது நோய் கண்டறிதல் அல்ல.","Ranges are for adults. This is not a diagnosis.")}</span>`);
+    const k=gk(id,e);if(k)h+=gH(k)}
+  fbM={id,html:h};openM=null;rHlth();
+}
+function mCard(m){
+  const ls=mList(m),l=ls[ls.length-1],pv=ls[ls.length-2],id=m.id,k=m.f[0][0];
+  let h=`<div class="card"><h3>${m.ic} ${esc(mn(m))}</h3>`;
+  if(l){const tr=pv?(l[k]>pv[k]?"↑":l[k]<pv[k]?"↓":"→"):"";
+    h+=`<div class="big">${mvf(l,m)} <span style="font-size:1rem">${m.u}</span> ${tr?`<span title="${x("முந்தையதுடன் ஒப்பீடு","Compared with previous")}">${tr}</span>`:""}</div><div class="muted">${x("கடைசி பதிவு","Last recorded")}: ${when(l.ts)}${m.ctx&&l.sc!=null?" · "+x(SC[l.sc][0],SC[l.sc][1]):""}</div>`+(pv?`<div class="muted">${x("முந்தையது","Previous")}: ${mvf(pv,m)} ${m.u} (${when(pv.ts)})</div>`:"")}
+  else h+=`<p class="muted">${x("இன்னும் தரவு இல்லை.","No data available yet.")}</p>`;
+  h+=`<button class="p" onclick="mo('${id}')">+ ${x("அளவீடு சேர்","Add Measurement")}</button>`+(ls.length?` <button class="g" onclick="mhs('${id}')">${x("வரலாறு","History")}</button>`:"");
+  if(openM===id)h+=`<div style="margin-top:8px">${m.f.map(f=>`<label for="mv_${f[0]}">${x(f[1],f[2])} (${m.u})</label><input id="mv_${f[0]}" type="number" step="any" inputmode="decimal">`).join("")}${m.ctx?`<label for="mv_sc">${x("எப்போது அளந்தீர்கள்?","When was it measured?")}</label><select id="mv_sc">${Object.keys(SC).map(q=>`<option value="${q}">${x(SC[q][0],SC[q][1])}</option>`).join("")}</select>`:""}<button class="p" onclick="msave('${id}')">${x("சேமி","Save")}</button> <button class="g" onclick="mc()">${x("ரத்து","Cancel")}</button></div>`;
+  return h+`<div id="me_${id}">${fbM&&fbM.id===id?fbM.html:""}</div></div>`;
+}
+function rHlth(){
+  const p=U.p,has=m=>mList(m).some(e=>dstr(new Date(e.ts))===td()),cx=[];
+  if(p.cs&&!has(MON[1]))cx.push(["sugar",x("இன்றைய இரத்த சர்க்கரையை பதிவு செய்ய விரும்புகிறீர்களா?","Would you like to record today's blood sugar?")]);
+  if(p.cb&&!has(MON[0]))cx.push(["bp",x("இன்றைய இரத்த அழுத்தத்தை பதிவு செய்ய விரும்புகிறீர்களா?","Would you like to record today's blood pressure?")]);
+  const qb=(k,l)=>`<button class="g" onclick="qk('${k}')">${l}</button>`;
+  const hist=()=>{if(!mh.id)return"";const m=MON.find(q=>q.id===mh.id);
+    return `<div class="card"><h3>${m.ic} ${esc(mn(m))} — ${x("வரலாறு","History")}</h3><label for="hr_r">${x("காலம்","Period")}</label><select id="hr_r"><option value="1">${x("இன்று","Today")}</option><option value="7">${x("கடந்த 7 நாள்","Last 7 days")}</option><option value="30">${x("கடந்த 30 நாள்","Last 30 days")}</option><option value="c">${x("தேதி வரம்பு","Custom date range")}</option></select>
+    <div class="row" id="hr_c" ${mh.r==="c"?"":"hidden"}><div>${fl("hr_f",x("தொடக்கம்","From"),"date")}</div><div>${fl("hr_t",x("முடிவு","To"),"date")}</div></div><div id="vo"></div><button class="g" onclick="mh.id=null;rHlth()">${x("மூடு","Close")}</button></div>`};
+  $("hlth").innerHTML=`<h2>${x("உடல்நல கண்காணிப்பு","Health Monitor")}</h2><p class="muted">${x("உங்கள் உடல் அளவீடுகளை ஒரே இடத்தில் கண்காணியுங்கள்.","Track your health measurements in one place.")}</p>`
+  +cx.map(c=>`<div class="lvl"><b>${c[1]}</b><button class="p" onclick="mo('${c[0]}')">${x("இப்போது பதிவு செய்","Record now")}</button></div>`).join("")
+  +MON.map(mCard).join("")+hist()
+  +`<div class="card"><h3>${x("எண் தெரியவில்லையா? நிலையை தேர்வு செய்யுங்கள்","Don't know the numbers? Pick how it reads")}</h3>
+  <b>BP</b><br>${qb("lowbp",x("குறைவு","Low"))}${qb("okbp",x("சாதாரணம்","Normal"))}${qb("highbp",x("அதிகம்","High"))}<br>
+  <b>${x("சர்க்கரை","Sugar")}</b><br>${qb("lowsg",x("குறைவு","Low"))}${qb("oksg",x("சாதாரணம்","Normal"))}${qb("highsg",x("அதிகம்","High"))}<div id="qo"></div></div>
+  <div class="card"><h3>${x("சர்க்கரை நோய் ஆபத்து (IDRS)","Diabetes risk (IDRS)")}</h3><p class="muted">${x("Madras Diabetes Research Foundation அடிப்படையில். பரிசோதனை அல்ல, ஆபத்து மதிப்பீடு மட்டும்.","Based on the IDRS (Madras Diabetes Research Foundation). A risk estimate only, not a diagnosis.")}</p>
+  <div class="row"><div>${fl("ag2",x("வயது","Age"),"number")}</div><div><label for="sex">${x("பாலினம்","Gender")}</label><select id="sex"><option value="">${x("தேர்வு செய்க","Select")}</option><option value="m">${x("ஆண்","Male")}</option><option value="f">${x("பெண்","Female")}</option><option value="x">${x("சொல்ல விரும்பவில்லை","Prefer not to say")}</option></select></div></div>
+  ${fl("wa",x("இடுப்பளவு (cm)","Waist (cm)"),"number")}<label for="ac">${x("உடல் உழைப்பு","Physical activity")}</label><select id="ac"><option value="0">${x("கடின உழைப்பு/உடற்பயிற்சி","Vigorous work/exercise")}</option><option value="10">${x("மிதமான","Moderate")}</option><option value="20">${x("லேசான","Mild")}</option><option value="30">${x("உட்கார்ந்தே","Sedentary")}</option></select>
+  <label for="fa">${x("குடும்பத்தில் சர்க்கரை","Family history of diabetes")}</label><select id="fa"><option value="0">${x("இல்லை","None")}</option><option value="10">${x("ஒருவருக்கு","One parent")}</option><option value="20">${x("இருவருக்கும்","Both parents")}</option></select>
+  <button class="p" id="db">${x("மதிப்பிடு","Check risk")}</button><div id="do"></div></div>`;
+  $("ag2").value=p.ag||"";$("sex").value=p.sx||"";
+  $("db").onclick=()=>{const a=+$("ag2").value,w=+$("wa").value,sx=$("sex").value,m=sx==="m";if(!a||!w||!sx){$("do").innerHTML=lvl("warn",x("விவரம் தேவை","Details needed"),x("வயது, பாலினம், இடுப்பளவு உள்ளிடவும்.","Enter age, gender and waist size."));return}
+    let s=a>=50?30:a>=35?20:0;s+=m?(w>=100?20:w>=90?10:0):(w>=90?20:w>=80?10:0);s+=+$("ac").value+ +$("fa").value;
+    $("do").innerHTML=(s>=60?lvl("bad",x("அதிக ஆபத்து — ","High risk — ")+s+"/100",x("மருத்துவரை பார்த்து இரத்த சர்க்கரை (FBS/HbA1c) பரிசோதியுங்கள்.","See a doctor and get a blood sugar test (FBS/HbA1c).")):s>=30?lvl("warn",x("நடுத்தர ஆபத்து — ","Moderate risk — ")+s+"/100",x("6 மாதத்துக்கு ஒருமுறை பரிசோதனை, தினம் 30 நிமிட நடை.","Test every 6 months and walk 30 minutes daily.")):lvl("ok",x("குறைந்த ஆபத்து — ","Low risk — ")+s+"/100",x("இதே பழக்கத்தை தொடருங்கள்.","Keep up your current habits.")))+(m?"":`<p class="muted">${x("பெண்களுக்கான இடுப்பளவு வரம்பு பயன்படுத்தப்பட்டது.","The female waist thresholds were used.")}</p>`)+gH("sugar")};
+  if(mh.id){$("hr_r").value=mh.r;$("hr_f").value=mh.from;$("hr_t").value=mh.to;
+    $("hr_r").onchange=()=>{mh.r=$("hr_r").value;$("hr_c").hidden=mh.r!=="c";vRender()};
+    $("hr_f").onchange=$("hr_t").onchange=()=>{mh.from=$("hr_f").value;mh.to=$("hr_t").value;vRender()};vRender()}
+}
+function vRender(){
+  const m=MON.find(q=>q.id===mh.id),k=m.f[0][0];let from,to=Infinity;
+  if(mh.r==="c"){from=mh.from?new Date(mh.from+"T00:00:00").getTime():0;to=mh.to?new Date(mh.to+"T23:59:59").getTime():Infinity}
+  else{const d=+mh.r;from=d===1?new Date().setHours(0,0,0,0):Date.now()-d*864e5}
+  const pts=mList(m).filter(e=>e.ts>=from&&e.ts<=to);
+  if(!pts.length){$("vo").innerHTML=`<p class="muted">${x("இந்த காலத்தில் தரவு இல்லை.","No data available for this period.")}</p>`;return}
+  const ser=m.f.map(f=>pts.map(e=>e[f[0]])),all=ser.flat(),mnv=Math.min(...all),mxv=Math.max(...all),W=320,H=120,sp=mxv-mnv||1,col=["var(--leaf)","var(--warn)"];
+  const px=i=>pts.length===1?W/2:12+i*(W-24)/(pts.length-1),py=v=>H-12-(v-mnv)/sp*(H-24);
+  const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(mn(m))}" style="background:var(--mint);border-radius:10px;margin-top:8px">`+ser.map((s,j)=>`<polyline fill="none" stroke="${col[j]}" stroke-width="2.5" points="${s.map((v,i)=>px(i)+","+py(v)).join(" ")}"/>`+s.map((v,i)=>`<circle cx="${px(i)}" cy="${py(v)}" r="3.5" fill="${col[j]}"/>`).join("")).join("")+`<text x="4" y="11" font-size="10" fill="currentColor">${mxv}</text><text x="4" y="${H-3}" font-size="10" fill="currentColor">${mnv}</text></svg>`;
+  let tr="";
+  if(pts.length>1){const c=pts[pts.length-1][k],p=pts[pts.length-2][k],w=c>p?x("அதிகம்","higher than"):c<p?x("குறைவு","lower than"):x("சமம்","the same as");
+    tr=`<p>${x(`சமீபத்திய ${mn(m)} (${c}) முந்தைய பதிவை (${p}) விட ${w}.`,`Your latest ${mn(m)} (${c}) is ${w} your previous entry (${p}).`)} <span class="muted">${x("இது போக்கு மட்டுமே, நோய் கண்டறிதல் அல்ல.","This is a trend only, not a diagnosis.")}</span></p>`}
+  $("vo").innerHTML=svg+(m.f.length>1?`<div class="muted">● ${x(m.f[0][1],m.f[0][2])} ● ${x(m.f[1][1],m.f[1][2])}</div>`:"")+tr+pts.slice().reverse().map(e=>`<div class="muted" style="padding:3px 0;border-bottom:1px solid var(--line)">${new Date(e.ts).toLocaleString(locL())} — <b>${mvf(e,m)} ${m.u}</b>${m.ctx&&e.sc!=null?" · "+x(SC[e.sc][0],SC[e.sc][1]):""}</div>`).join("");
+}
+
+/* ---------- Medicine ---------- */
+const fd=v=>({b:x("உணவுக்கு முன்","Before food"),a:x("உணவுக்கு பின்","After food"),w:x("உணவுடன்","With food")}[v]||"");
+const medAct=(m,d)=>m.start<=d&&(!m.end||m.end>=d);
+const hmNow=()=>{const n=new Date();return String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0")};
+function rMed(){
+  U.meds=U.meds||[];U.mlog=U.mlog||{};
+  const t=td(),hm=hmNow(),stt=(m,tm,d)=>(U.mlog[d]||{})[m.id+"_"+tm],rows=[];
+  U.meds.filter(m=>medAct(m,t)).forEach(m=>m.times.forEach(tm=>rows.push({m,tm})));rows.sort((a,b)=>a.tm<b.tm?-1:a.tm>b.tm?1:0);
+  let tk=0,sk=0,pd=0;
+  const list=rows.map(({m,tm})=>{const s=stt(m,tm,t);if(s==="taken")tk++;else if(s==="skipped")sk++;else pd++;
+    const note=[m.doc,m.notes].filter(Boolean).map(esc).join(" · ");
+    return `<div class="card" style="margin:8px 0"><b>💊 ${esc(m.n)}</b> · ${tm}${m.food?" · "+fd(m.food):""}${note?`<div class="muted">${note}</div>`:""}${s?`<span class="chip">${s==="taken"?"✅ "+x("எடுத்தேன்","Taken"):"⏭️ "+x("தவிர்த்தேன்","Skipped")}</span>`:tm<hm?`<span class="chip">⚠️ ${x("தவறியிருக்கலாம்","Possibly missed")}</span>`:""}<br><button class="p" onclick="ms('${m.id}','${tm}','taken')">${x("எடுத்தேன்","Taken")}</button> <button class="g" onclick="ms('${m.id}','${tm}','skipped')">${x("தவிர்த்தேன்","Skipped")}</button></div>`}).join("");
+  let hh="";
+  for(let i=0;i<7;i++){const d=ago(i);let a=0,b=0,c=0;
+    U.meds.filter(m=>medAct(m,d)).forEach(m=>m.times.forEach(tm=>{const s=stt(m,tm,d);if(s==="taken")a++;else if(s==="skipped")b++;else if(d<t||tm<hm)c++}));
+    if(a+b+c)hh+=`<div style="padding:4px 0;border-bottom:1px solid var(--line)"><b>${d}</b> · ✅ ${a} · ⏭️ ${b} · ⚠️ ${c}</div>`}
+  const mine=U.meds.map(m=>`<div style="padding:6px 0;border-bottom:1px solid var(--line)">💊 <b>${esc(m.n)}</b> · ${m.times.join(", ")} (${m.times.length}×/${x("நாள்","day")}) · ${m.start} → ${m.end||"…"} <button class="g" onclick="md('${m.id}')" aria-label="Delete">🗑</button></div>`).join("");
+  $("med").innerHTML=`<h2>${x("மருந்து நினைவூட்டல்","Medicine reminders")}</h2>
+  <div class="lvl warn"><b>${x("முக்கியம்","Important")}</b>${x("மருத்துவர் எழுதிக்கொடுத்ததை அப்படியே உள்ளிடவும். இந்த app மருந்து அளவை மாற்றவோ பரிந்துரைக்கவோ செய்யாது.","Enter exactly what your doctor prescribed. This app does not change or suggest doses.")}</div>
+  <div class="card"><h3>${x("இன்றைய சுருக்கம்","Today's summary")}</h3>✅ ${x("எடுத்தது","Taken")}: ${tk} · ⏭️ ${x("தவிர்த்தது","Skipped")}: ${sk} · ⏳ ${x("மீதம்","Pending")}: ${pd}${list||`<p class="muted">${x("இன்று மருந்து இல்லை.","No medicines scheduled today.")}</p>`}</div>
+  <div class="card"><h3>${x("மருந்து சேர்","Add medicine")}</h3>${fl("m_n",x("மருந்து பெயர்","Medicine name"))}
+  <label>${x("நேரம் (அதிகபட்சம் 3 முறை)","Times (up to 3 a day)")}</label><div class="row"><input id="m_t1" type="time" aria-label="Time 1"><input id="m_t2" type="time" aria-label="Time 2"><input id="m_t3" type="time" aria-label="Time 3"></div>
+  <label for="m_f">${x("உணவு","Food instruction")}</label><select id="m_f"><option value="b">${x("உணவுக்கு முன்","Before food")}</option><option value="a" selected>${x("உணவுக்கு பின்","After food")}</option><option value="w">${x("உணவுடன்","With food")}</option><option value="">${x("குறிப்பு இல்லை","Not specified")}</option></select>
+  <div class="row"><div>${fl("m_s",x("தொடக்க தேதி","Start date"),"date")}</div><div>${fl("m_e",x("முடிவு தேதி","End date"),"date")}</div></div>${fl("m_d",x("மருத்துவர் / மருத்துவமனை","Doctor / hospital"))}${fl("m_o",x("குறிப்பு (விருப்பம்)","Notes (optional)"))}
+  <button class="p" id="ma" type="button">${x("சேமி","Save")}</button></div>
+  ${mine?`<div class="card"><h3>${x("என் மருந்துகள்","My medicines")}</h3>${mine}</div>`:""}
+  <div class="card"><h3>${x("கடந்த 7 நாள் வரலாறு","Last 7 days history")}</h3>${hh||`<p class="muted">${x("பதிவு இல்லை.","No history yet.")}</p>`}<p class="muted">✅ ${x("எடுத்தது","Taken")} · ⏭️ ${x("தவிர்த்தது","Skipped")} · ⚠️ ${x("தவறியது","Missed")}. ${x("நினைவூட்டல் இந்த பக்கம் உலாவியில் திறந்திருக்கும்போது மட்டுமே வரும்.","Reminders only work while this page is open in your browser.")}</p></div>`;
+  $("m_s").value=t;
+  $("ma").onclick=()=>{const g=id=>$(id).value.trim(),times=["m_t1","m_t2","m_t3"].map(g).filter(Boolean);
+    if(!g("m_n")||!times.length){alert(x("மருந்து பெயர், குறைந்தது ஒரு நேரம் தேவை.","Medicine name and at least one time are required."));return}
+    U.meds.push({id:Date.now().toString(36),n:g("m_n"),times:[...new Set(times)].sort(),food:$("m_f").value,start:g("m_s")||t,end:g("m_e"),doc:g("m_d"),notes:g("m_o")});save();
+    if("Notification" in window&&Notification.permission==="default")Notification.requestPermission();rMed()};
+}
+function ms(id,tm,s){const t=td();U.mlog=U.mlog||{};(U.mlog[t]=U.mlog[t]||{})[id+"_"+tm]=s;save();rMed()}
+function md(id){if(confirm(x("இந்த மருந்தை நீக்கவா?","Delete this medicine?"))){U.meds=U.meds.filter(m=>m.id!==id);save();rMed()}}
+let lastN="";
+setInterval(()=>{if(!U||!U.meds)return;const t=td(),hm=hmNow();if(lastN===t+hm)return;lastN=t+hm;
+  U.meds.filter(m=>medAct(m,t)&&m.times.includes(hm)).forEach(m=>{if((U.mlog[t]||{})[m.id+"_"+hm])return;
+    const msg=x("மருந்து நேரம்: ","Medicine time: ")+m.n+(m.food?" ("+fd(m.food)+")":"");
+    if("Notification" in window&&Notification.permission==="granted")new Notification("ArogyaKaval",{body:msg});else alert(msg)})},15000);
+
+
+/* ---------- Profile ---------- */
+function rProf(){
+  const p=U.p,r=(l,v,tel)=>`<div><span class="muted">${l}</span><br>${v?(tel?`<a href="tel:${esc(v)}">${esc(v)}</a>`:esc(v)):`<span class="muted">${x("கொடுக்கப்படவில்லை","Not provided")}</span>`}</div>`;
+  const gd={m:x("ஆண்","Male"),f:x("பெண்","Female"),x:x("சொல்ல விரும்பவில்லை","Prefer not to say")}[p.sx]||"";
+  const cond=[p.cs&&x("சர்க்கரை","Diabetes"),p.cb&&"BP",p.co&&(p.cot||x("வேறு","Other"))].filter(Boolean).join(", ");
+  const miss=[];
+  if(!p.ag)miss.push(x("வயது","Age"));if(!p.sx)miss.push(x("பாலினம்","Gender"));if(!p.wt)miss.push(x("எடை","Weight"));
+  if(!P[p.dist]&&!p.lat)miss.push(x("மாவட்டம் (வானிலைக்கு)","District (for weather)"));
+  if(!(p.f1p||p.f2p||p.gp))miss.push(x("அவசர தொடர்பு","Emergency contact"));
+  if(!(p.h1n||p.h2n))miss.push(x("அருகிலுள்ள மருத்துவமனை","Nearby hospital"));
+  $("prof").innerHTML=`<h2>${x("என் தகவல்","My info")}</h2>`+(miss.length?`<div class="card"><h3>${x("இவற்றை பிறகு சேர்க்கலாம்","You can add these later")}</h3>${miss.map(m=>`<span class="chip">${m}</span>`).join("")}<p class="muted">${x("இவை விருப்பமானவை. சேர்த்தால், தொடர்புடைய இடங்களில் மட்டும் பயன்படுத்தப்படும்.","These are optional. If you add them, they are used only where relevant.")}</p></div>`:"")+`
+  <div class="card"><div class="row">${r(x("பெயர்","Name"),p.n)}${r("Email",p.em)}${r(x("வயது","Age"),p.ag)}${r(x("பாலினம்","Gender"),gd)}${r(x("எடை (kg)","Weight (kg)"),p.wt)}${r(x("தொலைபேசி","Phone"),p.ph,1)}${r(x("மாவட்டம்","District"),P[p.dist]?P[p.dist][0]:"")}${r(x("ஊர்","Town"),p.loc)}${r(x("நிலை","Conditions"),cond)}</div></div>
+  <div class="card"><h3>${x("குடும்பம் / பாதுகாவலர்","Family / Guardian")}</h3><div class="row">${r(p.f1n||x("நபர் 1","Person 1"),p.f1p,1)}${r(p.f2n||x("நபர் 2","Person 2"),p.f2p,1)}${r((p.gn||x("பாதுகாவலர்","Guardian")),p.gp,1)}</div></div>
+  <div class="card"><h3>${x("அருகிலுள்ள மருத்துவமனை","Nearby hospitals")}</h3><div class="row">${[1,2].map(n=>r(p["h"+n+"n"]?p["h"+n+"n"]+" ("+ht(p["h"+n+"t"])+")":x("மருத்துவமனை "+n,"Hospital "+n),p["h"+n+"p"],1)).join("")}</div></div>
+  <button class="p" id="ed">${x("தகவலை சேர் / மாற்று","Add / edit info")}</button> <button class="g" id="so">${x("வெளியேறு","Sign out")}</button>
+  <p class="muted">⚠️ ${x("இந்த app மருத்துவரின் ஆலோசனைக்கு மாற்று அல்ல. தகவல் உங்கள் போனில் மட்டுமே உள்ளது.","This app is not a substitute for a doctor. Your data stays on your phone only.")}</p>`;
+  $("ed").onclick=()=>showReg(Object.assign({},U.p));$("so").onclick=()=>{try{localStorage.removeItem("ak_cur")}catch(e){}U=null;showReg()};
+}
+
+/* ---------- Start ---------- */
+head();
+const curE=gl("ak_cur");U=curE?gl("ak_u_"+curE):null;
+U?enter():showReg();
+</script>
+</body>
+</html>
